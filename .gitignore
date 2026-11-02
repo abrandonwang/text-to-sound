@@ -1,0 +1,6 @@
+.claude/
+.ipynb_checkpoints/
+.DS_Store
+*.npy
+*.wav
+*.7z
