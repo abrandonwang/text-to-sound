@@ -6,7 +6,7 @@ Given a natural-language description such as *"rain falling on a tin roof"*, the
 
 The diffusion model, noise schedule, U-Net, training loop and samplers are written from scratch. The pretrained models used are a frozen text/audio encoder (CLAP) and a frozen vocoder (BigVGAN).
 
-> **Status:** in active development. Data pipeline complete; DDPM validated on MNIST; mel-space model next. See [Roadmap](#roadmap).
+> **Status:** in active development. A mel-space baseline generates audio from text prompts; latent diffusion is next. See [Roadmap](#roadmap) and [Results](#results).
 
 ---
 
@@ -96,7 +96,7 @@ text-to-sound/
 └── LICENSE
 ```
 
-Notebooks are developed on Kaggle (NVIDIA T4) and synced to this repository on each saved version. Stable code will move into `.py` modules in Phase 6.
+Notebooks are developed on Kaggle and Colab (NVIDIA T4). `text-to-sound-train.ipynb` currently uses Colab paths with data in Google Drive. Stable code will move into `.py` modules in Phase 6.
 
 ---
 
@@ -115,6 +115,7 @@ All notebooks run on Kaggle with a GPU accelerator and internet access enabled.
 - With recent `transformers`, `ClapModel.get_*_features` returns an output object; use `.pooler_output`. `ClapProcessor` takes `audio=` rather than `audios=`.
 - Importing `bigvgan` switches matplotlib to the `Agg` backend; run `%matplotlib inline` afterwards.
 - Extract audio to `/kaggle/temp`, not `/kaggle/working`, to keep raw audio out of notebook outputs.
+- Load the dataset arrays into RAM for training. With `mmap_mode`, shuffled reads from Kaggle's input disk were the bottleneck (2.14 s per step).
 
 </details>
 
@@ -127,8 +128,8 @@ All notebooks run on Kaggle with a GPU accelerator and internet access enabled.
 | 0 | Environment setup (Kaggle, GitHub, Hugging Face) | Done |
 | 1 | Data exploration; vocoder round trip; CLAP retrieval check (9/10) | Done |
 | 2 | Preprocessing pipeline and dataset | Done |
-| 3 | DDPM from scratch on MNIST: training, sampling, class conditioning, CFG | In progress |
-| 4 | Mel-space diffusion conditioned on CLAP | Planned |
+| 3 | DDPM from scratch on MNIST: training, sampling, class conditioning, CFG | Done |
+| 4 | Mel-space diffusion conditioned on CLAP | Done |
 | 5 | Mel VAE (`1×80×256` → `4×20×64`) | Planned |
 | 6 | Latent diffusion, EMA, DDIM sampling | Planned |
 | 7 | Scaling (FSD50K [[11]](#references)) and conditioning ablations | Planned |
@@ -139,13 +140,18 @@ All notebooks run on Kaggle with a GPU accelerator and internet access enabled.
 
 ## Results
 
-No audio-generation results yet. Evaluation will report Fréchet Audio Distance [[12]](#references) and CLAP text–audio similarity on the Clotho validation split, with pretrained AudioLDM [[1]](#references) as a reference.
+The mel-space baseline produces audio that follows text prompts for common, texture-like sounds, based on informal listening. No quantitative evaluation has been run yet. Evaluation will report Fréchet Audio Distance [[12]](#references) and CLAP text–audio similarity on the Clotho validation split, with pretrained AudioLDM [[1]](#references) as a reference.
 
 | Experiment | Result |
 |---|---|
 | Vocoder round trip (BigVGAN, Clotho) | Perceptually near-identical reconstruction |
 | CLAP zero-shot retrieval, 10 clips × 10 captions | 9 / 10 correct |
 | DDPM on MNIST, 5 epochs, 0.53 M params | Training loss 0.117 → 0.025 |
+| Conditional DDPM + CFG on MNIST, 20 epochs, `w = 3` | About 15 / 16 samples clearly "7", 12 / 16 clearly "8" (visual inspection) |
+| Mel-space U-Net, 50 epochs, 8.8 M params, `lr` 2e-4 | Training loss 0.116 → 0.018; 2.43 steps/s, 5.34 GB on a T4 |
+| Text prompts, mel-space U-Net, `w = 3` | "Rain", "birds" and "people talking" closer to their prompts; "a dog barking" fails (informal listening) |
+
+**Known limitation:** the baseline handles textures better than distinct events. Barking also has little training data: 60 of 3,839 Clotho clips have at least 3 captions mentioning it (keyword count).
 
 ---
 
