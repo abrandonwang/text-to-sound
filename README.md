@@ -92,11 +92,12 @@ text-to-sound/
 ├── clotho-explore.ipynb       # Phases 1–2: data exploration, vocoder/CLAP checks, preprocessing
 ├── ddpm-mnist.ipynb           # Phase 3: DDPM from scratch on MNIST (validation of the diffusion code)
 ├── text-to-sound-train.ipynb  # Phases 2, 4: dataset round-trip check; mel-space training
+├── mel_vae.ipynb              # Phase 5: mel VAE
 ├── README.md
 └── LICENSE
 ```
 
-Notebooks are developed on Kaggle and Colab (NVIDIA T4). `text-to-sound-train.ipynb` currently uses Colab paths with data in Google Drive. Stable code will move into `.py` modules in Phase 6.
+Notebooks are developed on Kaggle (NVIDIA T4). Stable code will move into `.py` modules in Phase 6.
 
 ---
 
