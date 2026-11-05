@@ -97,7 +97,7 @@ text-to-sound/
 └── LICENSE
 ```
 
-Notebooks are developed on Kaggle (NVIDIA T4). Stable code will move into `.py` modules in Phase 6.
+Notebooks run on Colab (NVIDIA T4), with data and checkpoints in Google Drive. `clotho-explore.ipynb` and `ddpm-mnist.ipynb` were developed on Kaggle and keep Kaggle paths. Stable code will move into `.py` modules in Phase 6.
 
 ---
 
