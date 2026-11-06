@@ -6,7 +6,7 @@ Given a natural-language description such as *"rain falling on a tin roof"*, the
 
 The diffusion model, noise schedule, U-Net, training loop and samplers are written from scratch. The pretrained models used are a frozen text/audio encoder (CLAP) and a frozen vocoder (BigVGAN).
 
-> **Status:** in active development. A mel-space baseline generates audio from text prompts; latent diffusion is next. See [Roadmap](#roadmap) and [Results](#results).
+> **Status:** in active development. A mel-space baseline generates audio from text prompts, and the mel VAE is trained; latent diffusion is next. See [Roadmap](#roadmap) and [Results](#results).
 
 ---
 
@@ -41,7 +41,7 @@ flowchart LR
 | Denoiser | U-Net [[4]](#references) with skip connections and sinusoidal timestep embeddings [[5]](#references) | Timestep injected per block as a channel-wise bias |
 | Conditioning | CLAP [[6]](#references) embeddings (512-d), shared text/audio space | Trained on audio embeddings, prompted with text embeddings at inference, as in AudioLDM [[1]](#references) |
 | Guidance | Classifier-free guidance [[7]](#references) | Condition dropout during training |
-| Latent space | Convolutional VAE, mel `1×80×256` → latent `4×20×64` | Planned (Phase 5), following latent diffusion [[8]](#references) |
+| Latent space | Convolutional VAE, mel `1×80×256` → latent `4×20×64` | L1 + KL, then decoder fine-tuned with a PatchGAN discriminator [[13]](#references) (encoder frozen), following latent diffusion [[8]](#references) |
 | Vocoder | BigVGAN v2 [[9]](#references), `nvidia/bigvgan_v2_22khz_80band_256x` | Frozen |
 
 ### Training objective
@@ -92,7 +92,8 @@ text-to-sound/
 ├── clotho-explore.ipynb       # Phases 1–2: data exploration, vocoder/CLAP checks, preprocessing
 ├── ddpm-mnist.ipynb           # Phase 3: DDPM from scratch on MNIST (validation of the diffusion code)
 ├── text-to-sound-train.ipynb  # Phases 2, 4: dataset round-trip check; mel-space training
-├── mel_vae.ipynb              # Phase 5: mel VAE
+├── mel_vae.ipynb              # Phase 5: mel VAE, discriminator, latent encoding
+├── web/                       # Showcase website (mock backend for now)
 ├── README.md
 └── LICENSE
 ```
@@ -131,11 +132,11 @@ All notebooks run on Kaggle with a GPU accelerator and internet access enabled.
 | 2 | Preprocessing pipeline and dataset | Done |
 | 3 | DDPM from scratch on MNIST: training, sampling, class conditioning, CFG | Done |
 | 4 | Mel-space diffusion conditioned on CLAP | Done |
-| 5 | Mel VAE (`1×80×256` → `4×20×64`) | Planned |
+| 5 | Mel VAE (`1×80×256` → `4×20×64`) | Done |
 | 6 | Latent diffusion, EMA, DDIM sampling | Planned |
 | 7 | Scaling (FSD50K [[11]](#references)) and conditioning ablations | Planned |
 | 8 | Evaluation: FAD [[12]](#references), CLAP score, AudioLDM baseline | Planned |
-| 9 | Gradio demo on Hugging Face Spaces | Planned |
+| 9 | Showcase website connected to the model ([mock live](https://abrandonwang.github.io/text-to-sound/)) | In progress |
 
 ---
 
@@ -151,6 +152,9 @@ The mel-space baseline produces audio that follows text prompts for common, text
 | Conditional DDPM + CFG on MNIST, 20 epochs, `w = 3` | About 15 / 16 samples clearly "7", 12 / 16 clearly "8" (visual inspection) |
 | Mel-space U-Net, 50 epochs, 8.8 M params, `lr` 2e-4 | Training loss 0.116 → 0.018; 2.43 steps/s, 5.34 GB on a T4 |
 | Text prompts, mel-space U-Net, `w = 3` | "Rain", "birds" and "people talking" closer to their prompts; "a dog barking" fails (informal listening) |
+| Mel VAE, 12 epochs, L1 + 1e-5·KL | Validation L1 0.024 (4 crops); reconstructions keep structure but have a low static (smoothed noise texture) |
+| Mel VAE + PatchGAN decoder fine-tune, 5 epochs | Validation L1 0.031 (4 crops), but reconstructions sound near-identical to the originals (informal listening) |
+| Latents | 25,469 × `4×20×64`, std 1.46, scale factor 0.686 |
 
 **Known limitation:** the baseline handles textures better than distinct events. Barking also has little training data: 60 of 3,839 Clotho clips have at least 3 captions mentioning it (keyword count).
 
@@ -170,6 +174,7 @@ The mel-space baseline produces audio that follows text prompts for common, text
 10. K. Drossos, S. Lipping, T. Virtanen. **Clotho: An Audio Captioning Dataset.** ICASSP 2020. [arXiv:1910.09387](https://arxiv.org/abs/1910.09387)
 11. E. Fonseca et al. **FSD50K: An Open Dataset of Human-Labeled Sound Events.** IEEE/ACM TASLP 2022. [arXiv:2010.00475](https://arxiv.org/abs/2010.00475)
 12. K. Kilgour et al. **Fréchet Audio Distance: A Metric for Evaluating Music Enhancement Algorithms.** Interspeech 2019. [arXiv:1812.08466](https://arxiv.org/abs/1812.08466)
+13. P. Isola, J.-Y. Zhu, T. Zhou, A. A. Efros. **Image-to-Image Translation with Conditional Adversarial Networks.** CVPR 2017. [arXiv:1611.07004](https://arxiv.org/abs/1611.07004)
 
 ---
 
