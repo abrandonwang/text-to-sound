@@ -1,0 +1,105 @@
+:root {
+  --bg: #020203;
+  --fg: #f4f4f8;
+  --faint: rgba(244, 244, 248, 0.28);
+  --mid: rgba(244, 244, 248, 0.6);
+  --rainbow: linear-gradient(90deg, #ff2bd6, #7a5cff, #2be4ff, #3dff8b, #ffe14d, #ff2bd6);
+  --sans: 'Inter Tight', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); overflow: hidden; }
+body { font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+::selection { background: #2be4ff; color: #000; }
+
+/* ---------- background ---------- */
+.led { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+.vignette {
+  position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.7) 100%);
+}
+
+/* ---------- centre input ---------- */
+.center {
+  position: fixed; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 22px; pointer-events: none;
+}
+.prompt { position: relative; pointer-events: auto; width: min(680px, 86vw); }
+.prompt input {
+  display: block; width: 100%; background: transparent; border: 0; outline: 0;
+  text-align: center; font-size: clamp(28px, 3.2vw, 44px); font-weight: 400; letter-spacing: -0.015em;
+  padding: 10px 0 16px; caret-color: transparent;
+}
+.prompt input::placeholder { color: rgba(244, 244, 248, 0.34); transition: color 0.2s; }
+.prompt input:focus::placeholder { color: rgba(244, 244, 248, 0.22); }
+
+/* the underline: dim at rest, lights up (rainbow) when focused, flows while generating */
+.prompt::before, .prompt::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px; }
+.prompt::before { background: rgba(244, 244, 248, 0.14); }
+.prompt::after {
+  background: var(--rainbow); background-size: 200% 100%;
+  transform: scaleX(0); transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.prompt:focus-within::after, .prompt.is-busy::after { transform: scaleX(1); }
+.prompt.is-busy::after { animation: flow 1.4s linear infinite; }
+@keyframes flow { to { background-position: -200% 0; } }
+
+.under { pointer-events: auto; height: 20px; display: flex; justify-content: center; gap: 28px; }
+.under button, .under a {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: lowercase;
+  color: var(--mid); opacity: 0; transform: translateY(-4px); pointer-events: none;
+  transition: opacity 0.4s, transform 0.4s, color 0.2s;
+}
+.under button.on, .under a.on { opacity: 1; transform: none; pointer-events: auto; }
+.under button:hover, .under a:hover { color: var(--fg); }
+.under button.on.is-playing { opacity: 0.3; pointer-events: none; }
+.under svg { width: 9px; height: 11px; fill: currentColor; }
+.err { font-family: var(--mono); font-size: 12px; color: #ff5c7a; }
+
+/* ---------- step drum (left) ---------- */
+.side {
+  position: fixed; left: clamp(20px, 4vw, 56px); top: 50%;
+  width: 236px; height: 150px; margin-top: -75px;
+  background: #000; border-radius: 18px; overflow: hidden; pointer-events: none;
+  opacity: 0; transform: translateX(-12px);
+  transition: opacity 0.6s, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.side.on { opacity: 1; transform: none; }
+.drum {
+  position: absolute; inset: 0; perspective: 420px; transform-style: preserve-3d;
+  -webkit-mask-image: linear-gradient(transparent 2%, #000 38%, #000 62%, transparent 98%);
+  mask-image: linear-gradient(transparent 2%, #000 38%, #000 62%, transparent 98%);
+}
+.drum-item {
+  position: absolute; left: 24px; right: 24px; top: 50%; height: 26px; margin-top: -13px;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 13px; letter-spacing: 0.02em; white-space: nowrap;
+  color: var(--faint); backface-visibility: hidden;
+  transition: transform 0.7s cubic-bezier(0.3, 0.9, 0.2, 1), opacity 0.7s, color 0.4s;
+}
+.drum-item.is-front { color: var(--fg); font-size: 14px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.35; flex: none; transition: background 0.3s, opacity 0.3s; }
+.drum-item.is-front.is-active .dot { background: #2be4ff; opacity: 1; animation: beat 1s ease-in-out infinite; }
+.drum-item.is-done .dot { background: #3dff8b; opacity: 0.9; }
+@keyframes beat { 50% { transform: scale(0.55); opacity: 0.5; } }
+
+/* diffusion progress: a hairline under the label */
+.track { position: absolute; left: 16px; right: 0; bottom: -3px; height: 2px; background: rgba(244, 244, 248, 0.1); border-radius: 2px; overflow: hidden; opacity: 0; transition: opacity 0.3s; }
+.drum-item.is-front .track { opacity: 1; }
+.track span { display: block; height: 100%; background: var(--rainbow); background-size: 230px 100%; transform-origin: left; transition: transform 0.12s linear; }
+
+/* ---------- small screens ---------- */
+@media (max-width: 900px) {
+  .side { left: 50%; top: auto; bottom: 28px; margin: 0 0 0 -118px; height: 132px; transform: translateY(12px); }
+  .side.on { transform: none; }
+  .center { justify-content: flex-start; padding-top: 22vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drum-item, .side { transition-duration: 0.01s; }
+  .prompt.is-busy::after, .drum-item .dot { animation: none !important; }
+}
