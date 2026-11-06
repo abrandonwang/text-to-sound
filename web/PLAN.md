@@ -17,12 +17,13 @@ Built against a mock backend so it can be finished before the model is.
 Run it locally: see `README.md`.
 
 **Design (v2):** one full-screen page, very dark. Background is a canvas "LED panel"
-(`LedField.tsx`): every cell is one RGB pixel with bloom. Idle, it shows a travelling neon
-wave. During generation it shows the actual spectrogram the model is producing, mirrored
-around the centre line (low frequencies in the middle), starting as static and resolving as
-noise is removed. While the audio plays, a white playhead sweeps across and loudness drives
-brightness (Web Audio analyser). The only UI is a centred text input and a faded text column
-of steps on the left (`Steps.tsx`) that light up as each step runs.
+(`LedField.tsx`): every cell is one RGB pixel with bloom. Idle, it shows a rainbow
+backlight glowing in an oval around the typed text. After Enter it goes dark and stays still while the step labels animate. In the
+finale the result's spectrogram fades in, mirrored around the centre line (low frequencies
+in the middle), and a thin playhead moves across it while the audio plays. The only UI is a centred text input. On Enter it dissolves into a full-screen sequence
+(`Sequence.tsx`): each step rises in centre-stage with a small LED loader, then gives way to
+the next. A finale (`Finale.tsx`) fades the spectrogram in and shows the prompt, play, download and "make another". Text stays readable because the
+LED panel switches off its own LEDs around any `[data-quiet]` element.
 
 ## 2. Architecture
 
