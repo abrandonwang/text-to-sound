@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState }
 import { generate, type GenEvent, type MelImage } from './api'
 import { Finale } from './components/Finale'
 import { LedField, newScene, setMode, type LedMode } from './components/LedField'
-import { STAGES, Sequence } from './components/Sequence'
+import { Sequence } from './components/Sequence'
 import { initialState, reducer } from './state'
 
 type View = 'idle' | 'run' | 'finale' | 'error'
@@ -25,7 +25,6 @@ export default function App() {
   const [prompt, setPrompt] = useState('')
   const [playing, setPlaying] = useState(false)
   const [shake, setShake] = useState(false)
-  const [visualStage, setVisualStage] = useState(0)
   const scene = useRef(newScene())
   const resultMel = useRef<Uint8Array | null>(null)
   const audio = useRef<HTMLAudioElement>(null)
@@ -92,7 +91,6 @@ export default function App() {
     Object.assign(scene.current, { mel: null, noise: 0, playhead: null })
     resultMel.current = null
     setMode(scene.current, 'inhale')
-    setVisualStage(0)
     setView('run')
     dispatch({ type: 'start', prompt: text, steps: 50 })
     try {
@@ -192,16 +190,6 @@ export default function App() {
     return () => cancelAnimationFrame(raf)
   }, [playing])
 
-  // tab title follows the experience
-  useEffect(() => {
-    document.title =
-      view === 'run'
-        ? `${STAGES[visualStage].label} · text to sound`
-        : view === 'finale'
-          ? `${playing ? '▶ ' : ''}“${s.prompt}”`
-          : 'text to sound · Brandon Wang'
-  }, [view, s.prompt, playing, visualStage])
-
   // shrink the prompt text to fit on one line inside the box as it gets longer
   const [, forceFit] = useState(0)
   useEffect(() => {
@@ -256,10 +244,7 @@ export default function App() {
           />
         </form>
 
-        <Sequence s={s} active={view === 'run'} onStage={(i) => {
-            setMode(scene.current, STAGE_MODES[i])
-            setVisualStage(i)
-          }} onDone={onSequenceDone} />
+        <Sequence s={s} active={view === 'run'} onStage={(i) => setMode(scene.current, STAGE_MODES[i])} onDone={onSequenceDone} />
 
         <Finale
           on={view === 'finale'}
