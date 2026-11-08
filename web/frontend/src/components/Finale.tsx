@@ -47,7 +47,7 @@ export function Finale(props: {
 
   return (
     <div className={`finale ${on ? 'on' : ''}`} aria-hidden={!on}>
-      <h1 className="title" data-quiet="">
+      <h1 className={`title ${prompt.length > 120 ? 'is-longer' : prompt.length > 50 ? 'is-long' : ''}`} data-quiet="">
         {on &&
           words.map((w, wi) => (
             <Fragment key={wi}>

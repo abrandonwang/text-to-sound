@@ -1,16 +1,23 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { generate, type GenEvent, type MelImage } from './api'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { generate, suggest, wakeServer, type GenEvent, type MelImage, type SuggestResult } from './api'
 import { Finale } from './components/Finale'
 import { LedField, newScene, setMode, type LedMode } from './components/LedField'
 import { Sequence } from './components/Sequence'
 import { initialState, reducer } from './state'
-import { checkSound } from './vocab/match'
+import { localSuggest, normPrompt } from './vocab/match'
 
 type View = 'idle' | 'run' | 'finale' | 'error'
 const STAGE_MODES: LedMode[] = ['encode', 'denoise', 'decode', 'vocode']
 
-// Prompt length cap: short prompts keep the input big, clean and on one line.
-export const MAX_PROMPT = 15
+// Free text is allowed (the model is conditioned on CLAP text embeddings and
+// trained on full captions); the server accepts up to 200 characters.
+export const MAX_PROMPT = 200
+// How close by meaning (CLAP cosine) a server match must be to show. Junk input
+// ("pizza", "asdf") still lands on a few "hub" prompts at 0.60-0.65, so the top
+// match needs 0.66, and the others must also be within 0.1 of the top one.
+const MIN_TOP = 0.66
+const MIN_REST = 0.6
+const MAX_GAP = 0.1
 const measureCtx = document.createElement('canvas').getContext('2d')!
 
 function decodeMel(m: MelImage): Uint8Array {
@@ -26,7 +33,6 @@ export default function App() {
   const [prompt, setPrompt] = useState('')
   const [playing, setPlaying] = useState(false)
   const [shake, setShake] = useState(false)
-  const [bleed, setBleed] = useState(false)
   const scene = useRef(newScene())
   const resultMel = useRef<Uint8Array | null>(null)
   const audio = useRef<HTMLAudioElement>(null)
@@ -77,24 +83,61 @@ export default function App() {
     if (audio.current && s.result) audio.current.src = s.result.url
   }, [s.result])
 
-  // autocorrect: only sounds the model knows get through
-  const check = useMemo(() => checkSound(prompt), [prompt])
-  const shown = useRef('') // keep the last suggestion on screen while it fades out
-  if (check.suggestion) shown.current = check.suggestion
-  const accept = () => {
-    if (check.suggestion) setPrompt(check.suggestion)
+  // the model server sleeps when idle: start waking it as soon as the page opens
+  useEffect(() => {
+    wakeServer()
+  }, [])
+
+  // Suggestions, Krillion-style: a local typo fix first (instant), then the
+  // server's closest known-good prompts by meaning (debounced). They never
+  // block: Enter always generates exactly what was typed.
+  const q = normPrompt(prompt)
+  const local = useMemo(() => localSuggest(prompt), [prompt])
+  const [remote, setRemote] = useState<SuggestResult | null>(null)
+  const seeds = useRef(new Map<string, number>()) // known-good prompt -> the seed that sounds best
+  useEffect(() => {
+    const ask = suggest // null in mock mode: local matching only
+    if (!ask || q.length < 2 || view !== 'idle') {
+      setRemote(null)
+      return
+    }
+    const ctl = new AbortController()
+    const id = setTimeout(() => {
+      ask(q, ctl.signal)
+        .then((r) => {
+          r.suggestions.forEach((x) => seeds.current.set(x.prompt, x.seed))
+          setRemote(r)
+        })
+        .catch(() => {})
+    }, 300)
+    return () => {
+      clearTimeout(id)
+      ctl.abort()
+    }
+  }, [q, view])
+  const chips = useMemo(() => {
+    const out: string[] = local ? [local.prompt] : []
+    const top = remote?.suggestions[0]
+    if (remote && top && (remote.exact || top.similarity >= MIN_TOP))
+      remote.suggestions.forEach((x, i) => {
+        // exact hit: the top one is what was typed, so offer close phrasings of it instead
+        if (remote.exact ? x.similarity >= MIN_TOP : i === 0 || (x.similarity >= MIN_REST && top.similarity - x.similarity <= MAX_GAP))
+          out.push(x.prompt)
+      })
+    return [...new Set(out)].filter((c) => c !== q).slice(0, 3)
+  }, [local, remote, q])
+  // keep the last chips on screen while they fade out
+  const shown = useRef({ chips: [] as string[], typo: false })
+  if (chips.length) shown.current = { chips, typo: !!local && chips[0] === local.prompt }
+
+  const pick = (c: string) => {
+    setPrompt(c)
+    run(c)
   }
 
-  const run = useCallback(async () => {
-    const text = prompt.trim().toLowerCase()
-    if (!text || !check.ok) {
-      // not a sound we have: bleed red, shake, and swap in the suggestion (Enter again to go)
-      if (text) {
-        scene.current.alarm = performance.now()
-        setBleed(true)
-        later(900, () => setBleed(false))
-        accept()
-      }
+  const run = async (override?: string) => {
+    const text = normPrompt(override ?? prompt)
+    if (!text) {
       setShake(true)
       later(260, () => setShake(false))
       return
@@ -111,12 +154,13 @@ export default function App() {
     setView('run')
     dispatch({ type: 'start', prompt: text, steps: 50 })
     try {
-      const seed = Math.floor(Math.random() * 1e5)
+      // a known-good prompt uses its best seed; anything else gets a fresh one
+      const seed = seeds.current.get(text) ?? Math.floor(Math.random() * 1e5)
       for await (const ev of generate({ prompt: text, guidance: 3, steps: 50, seed }, ctl.signal)) onEvent(ev)
     } catch (e) {
       if ((e as Error).name !== 'AbortError') onEvent({ type: 'error', message: String(e) })
     }
-  }, [prompt, check])
+  }
 
   // sequence finished: the last label rises away, a beat of blackout, then the slam
   const onSequenceDone = () => {
@@ -237,7 +281,7 @@ export default function App() {
       <main className={`stage-root view-${view}`}>
         <form
           ref={form}
-          className={`prompt ${shake ? 'shake' : ''} ${bleed ? 'bleed' : ''}`}
+          className={`prompt ${shake ? 'shake' : ''}`}
           data-quiet="small"
           onSubmit={(e) => {
             e.preventDefault()
@@ -263,9 +307,9 @@ export default function App() {
             }}
             onKeyDown={(e) => {
               if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) e.preventDefault()
-              if (e.key === 'Tab' && check.suggestion) {
+              if (e.key === 'Tab' && chips.length) {
                 e.preventDefault()
-                accept()
+                setPrompt(chips[0])
               }
             }}
             onSelect={(e) => {
@@ -276,17 +320,17 @@ export default function App() {
             onFocus={() => (scene.current.focus = true)}
             onBlur={() => (scene.current.focus = false)}
           />
-          <button
-            type="button"
-            tabIndex={-1}
-            className={`suggest ${check.suggestion ? 'on' : ''}`}
-            data-quiet="small"
-            aria-hidden={!check.suggestion}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={accept}
-          >
-            <span>did you mean</span> {shown.current}
-          </button>
+          <div className={`suggest ${chips.length ? 'on' : ''}`} data-quiet="small" aria-hidden={!chips.length}>
+            <span className="suggest-label">{shown.current.typo ? 'did you mean' : 'closest sounds'}</span>
+            {shown.current.chips.map((c, i) => (
+              <Fragment key={c}>
+                {i > 0 && <span className="suggest-dot">·</span>}
+                <button type="button" tabIndex={-1} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(c)}>
+                  {c}
+                </button>
+              </Fragment>
+            ))}
+          </div>
         </form>
 
         <Sequence s={s} active={view === 'run'} onStage={(i) => setMode(scene.current, STAGE_MODES[i])} onDone={onSequenceDone} />
