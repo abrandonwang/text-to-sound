@@ -84,10 +84,19 @@ app.add_middleware(
 
 # ---------- helpers ----------
 def text_embedding(prompt):
-    t_in = proc(text = [prompt], return_tensors = "pt", padding = True).to(DEVICE)
+    """str or list of str -> [n, 512] unit vectors."""
+    t_in = proc(text = [prompt] if isinstance(prompt, str) else prompt, return_tensors = "pt", padding = True).to(DEVICE)
     out = clap.get_text_features(**t_in)
     c = out if torch.is_tensor(out) else out.pooler_output
     return F.normalize(c, dim = 1)
+
+
+# Prompts known to sound good, each with the seed that sounded best. /suggest finds the
+# ones closest in meaning (CLAP text space) to whatever the user typed.
+PROMPTS_FILE = os.environ.get("PROMPTS_FILE", os.path.join(HERE, "good_prompts.json"))
+GOOD = json.load(open(PROMPTS_FILE))["prompts"]
+with torch.inference_mode():
+    GOOD_EMB = torch.cat([text_embedding([g["prompt"] for g in GOOD[i:i + 64]]) for i in range(0, len(GOOD), 64)])
 
 
 def latent_to_mel(z):
@@ -192,6 +201,20 @@ def run(prompt, guidance, steps, seed):
 @app.get("/health")
 def health():
     return {"ok": True, "mock": False, "unet": UNET_FILE, "device": DEVICE}
+
+
+@app.get("/suggest")
+def suggest(q: str = Query(..., min_length = 1, max_length = 200), k: int = Query(3, ge = 1, le = 8)):
+    """Closest known-good prompts by meaning: "puppy" -> "a dog barking"."""
+    qn = " ".join(q.lower().split())
+    with torch.inference_mode():
+        sims = (text_embedding(qn) @ GOOD_EMB.T)[0].cpu()
+    order = sims.argsort(descending = True).tolist()
+    exact = [i for i, g in enumerate(GOOD) if g["prompt"] == qn]
+    picks = (exact + [i for i in order if i not in exact])[:k]
+    return {"query": q, "exact": bool(exact),
+            "suggestions": [{"prompt": GOOD[i]["prompt"], "seed": GOOD[i]["seed"],
+                             "similarity": round(float(sims[i]), 3)} for i in picks]}
 
 
 @app.get("/generate")

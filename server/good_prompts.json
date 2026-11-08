@@ -1,0 +1,797 @@
+{
+ "note": "placeholder list; replace with CLAP-scored prompts after unet_fsd2",
+ "prompts": [
+  {
+   "prompt": "a dog barking",
+   "seed": 0
+  },
+  {
+   "prompt": "rain falling",
+   "seed": 0
+  },
+  {
+   "prompt": "birds singing",
+   "seed": 0
+  },
+  {
+   "prompt": "people talking",
+   "seed": 0
+  },
+  {
+   "prompt": "thunder and heavy rain",
+   "seed": 0
+  },
+  {
+   "prompt": "footsteps on gravel",
+   "seed": 0
+  },
+  {
+   "prompt": "a car engine starting",
+   "seed": 0
+  },
+  {
+   "prompt": "waves crashing on the shore",
+   "seed": 0
+  },
+  {
+   "prompt": "a door slamming",
+   "seed": 0
+  },
+  {
+   "prompt": "glass breaking",
+   "seed": 0
+  },
+  {
+   "prompt": "a crowd cheering",
+   "seed": 0
+  },
+  {
+   "prompt": "wind blowing through trees",
+   "seed": 0
+  },
+  {
+   "prompt": "a phone ringing",
+   "seed": 0
+  },
+  {
+   "prompt": "a cat meowing",
+   "seed": 0
+  },
+  {
+   "prompt": "engine revving",
+   "seed": 0
+  },
+  {
+   "prompt": "accordion",
+   "seed": 0
+  },
+  {
+   "prompt": "acoustic guitar",
+   "seed": 0
+  },
+  {
+   "prompt": "aircraft",
+   "seed": 0
+  },
+  {
+   "prompt": "alarm",
+   "seed": 0
+  },
+  {
+   "prompt": "applause",
+   "seed": 0
+  },
+  {
+   "prompt": "bark",
+   "seed": 0
+  },
+  {
+   "prompt": "bass drum",
+   "seed": 0
+  },
+  {
+   "prompt": "bass guitar",
+   "seed": 0
+  },
+  {
+   "prompt": "bathtub",
+   "seed": 0
+  },
+  {
+   "prompt": "bell",
+   "seed": 0
+  },
+  {
+   "prompt": "bicycle",
+   "seed": 0
+  },
+  {
+   "prompt": "bicycle bell",
+   "seed": 0
+  },
+  {
+   "prompt": "bird",
+   "seed": 0
+  },
+  {
+   "prompt": "boat",
+   "seed": 0
+  },
+  {
+   "prompt": "boiling",
+   "seed": 0
+  },
+  {
+   "prompt": "boom",
+   "seed": 0
+  },
+  {
+   "prompt": "violin",
+   "seed": 0
+  },
+  {
+   "prompt": "brass",
+   "seed": 0
+  },
+  {
+   "prompt": "breathing",
+   "seed": 0
+  },
+  {
+   "prompt": "burp",
+   "seed": 0
+  },
+  {
+   "prompt": "bus",
+   "seed": 0
+  },
+  {
+   "prompt": "buzz",
+   "seed": 0
+  },
+  {
+   "prompt": "camera",
+   "seed": 0
+  },
+  {
+   "prompt": "car",
+   "seed": 0
+  },
+  {
+   "prompt": "car passing by",
+   "seed": 0
+  },
+  {
+   "prompt": "cat",
+   "seed": 0
+  },
+  {
+   "prompt": "chatter",
+   "seed": 0
+  },
+  {
+   "prompt": "cheering",
+   "seed": 0
+  },
+  {
+   "prompt": "chewing",
+   "seed": 0
+  },
+  {
+   "prompt": "chicken",
+   "seed": 0
+  },
+  {
+   "prompt": "child speaking",
+   "seed": 0
+  },
+  {
+   "prompt": "chime",
+   "seed": 0
+  },
+  {
+   "prompt": "clink",
+   "seed": 0
+  },
+  {
+   "prompt": "tweet",
+   "seed": 0
+  },
+  {
+   "prompt": "chuckle",
+   "seed": 0
+  },
+  {
+   "prompt": "church bell",
+   "seed": 0
+  },
+  {
+   "prompt": "clapping",
+   "seed": 0
+  },
+  {
+   "prompt": "clock",
+   "seed": 0
+  },
+  {
+   "prompt": "coin",
+   "seed": 0
+  },
+  {
+   "prompt": "keyboard typing",
+   "seed": 0
+  },
+  {
+   "prompt": "conversation",
+   "seed": 0
+  },
+  {
+   "prompt": "cough",
+   "seed": 0
+  },
+  {
+   "prompt": "cowbell",
+   "seed": 0
+  },
+  {
+   "prompt": "crack",
+   "seed": 0
+  },
+  {
+   "prompt": "crackle",
+   "seed": 0
+  },
+  {
+   "prompt": "crash cymbal",
+   "seed": 0
+  },
+  {
+   "prompt": "cricket",
+   "seed": 0
+  },
+  {
+   "prompt": "crow",
+   "seed": 0
+  },
+  {
+   "prompt": "crowd",
+   "seed": 0
+  },
+  {
+   "prompt": "crumpling",
+   "seed": 0
+  },
+  {
+   "prompt": "crushing",
+   "seed": 0
+  },
+  {
+   "prompt": "crying",
+   "seed": 0
+  },
+  {
+   "prompt": "cupboard",
+   "seed": 0
+  },
+  {
+   "prompt": "cutlery",
+   "seed": 0
+  },
+  {
+   "prompt": "cymbal",
+   "seed": 0
+  },
+  {
+   "prompt": "dishes",
+   "seed": 0
+  },
+  {
+   "prompt": "dog",
+   "seed": 0
+  },
+  {
+   "prompt": "door",
+   "seed": 0
+  },
+  {
+   "prompt": "doorbell",
+   "seed": 0
+  },
+  {
+   "prompt": "drawer",
+   "seed": 0
+  },
+  {
+   "prompt": "drill",
+   "seed": 0
+  },
+  {
+   "prompt": "drip",
+   "seed": 0
+  },
+  {
+   "prompt": "drum",
+   "seed": 0
+  },
+  {
+   "prompt": "drum kit",
+   "seed": 0
+  },
+  {
+   "prompt": "electric guitar",
+   "seed": 0
+  },
+  {
+   "prompt": "engine",
+   "seed": 0
+  },
+  {
+   "prompt": "engine starting",
+   "seed": 0
+  },
+  {
+   "prompt": "explosion",
+   "seed": 0
+  },
+  {
+   "prompt": "fart",
+   "seed": 0
+  },
+  {
+   "prompt": "female singing",
+   "seed": 0
+  },
+  {
+   "prompt": "woman speaking",
+   "seed": 0
+  },
+  {
+   "prompt": "fill",
+   "seed": 0
+  },
+  {
+   "prompt": "finger snapping",
+   "seed": 0
+  },
+  {
+   "prompt": "fire",
+   "seed": 0
+  },
+  {
+   "prompt": "fireworks",
+   "seed": 0
+  },
+  {
+   "prompt": "frog",
+   "seed": 0
+  },
+  {
+   "prompt": "frying",
+   "seed": 0
+  },
+  {
+   "prompt": "gasp",
+   "seed": 0
+  },
+  {
+   "prompt": "giggle",
+   "seed": 0
+  },
+  {
+   "prompt": "glass",
+   "seed": 0
+  },
+  {
+   "prompt": "glockenspiel",
+   "seed": 0
+  },
+  {
+   "prompt": "gong",
+   "seed": 0
+  },
+  {
+   "prompt": "growl",
+   "seed": 0
+  },
+  {
+   "prompt": "guitar",
+   "seed": 0
+  },
+  {
+   "prompt": "seagull",
+   "seed": 0
+  },
+  {
+   "prompt": "gunshot",
+   "seed": 0
+  },
+  {
+   "prompt": "gurgling",
+   "seed": 0
+  },
+  {
+   "prompt": "hammer",
+   "seed": 0
+  },
+  {
+   "prompt": "hands",
+   "seed": 0
+  },
+  {
+   "prompt": "harmonica",
+   "seed": 0
+  },
+  {
+   "prompt": "harp",
+   "seed": 0
+  },
+  {
+   "prompt": "hi-hat",
+   "seed": 0
+  },
+  {
+   "prompt": "hiss",
+   "seed": 0
+  },
+  {
+   "prompt": "human voice",
+   "seed": 0
+  },
+  {
+   "prompt": "idling",
+   "seed": 0
+  },
+  {
+   "prompt": "insect",
+   "seed": 0
+  },
+  {
+   "prompt": "synth",
+   "seed": 0
+  },
+  {
+   "prompt": "keys jangling",
+   "seed": 0
+  },
+  {
+   "prompt": "knock",
+   "seed": 0
+  },
+  {
+   "prompt": "laughter",
+   "seed": 0
+  },
+  {
+   "prompt": "liquid",
+   "seed": 0
+  },
+  {
+   "prompt": "male singing",
+   "seed": 0
+  },
+  {
+   "prompt": "man speaking",
+   "seed": 0
+  },
+  {
+   "prompt": "mallet",
+   "seed": 0
+  },
+  {
+   "prompt": "xylophone",
+   "seed": 0
+  },
+  {
+   "prompt": "fan",
+   "seed": 0
+  },
+  {
+   "prompt": "meow",
+   "seed": 0
+  },
+  {
+   "prompt": "microwave",
+   "seed": 0
+  },
+  {
+   "prompt": "motorcycle",
+   "seed": 0
+  },
+  {
+   "prompt": "music",
+   "seed": 0
+  },
+  {
+   "prompt": "ocean",
+   "seed": 0
+  },
+  {
+   "prompt": "organ",
+   "seed": 0
+  },
+  {
+   "prompt": "tape",
+   "seed": 0
+  },
+  {
+   "prompt": "percussion",
+   "seed": 0
+  },
+  {
+   "prompt": "piano",
+   "seed": 0
+  },
+  {
+   "prompt": "pluck",
+   "seed": 0
+  },
+  {
+   "prompt": "pour",
+   "seed": 0
+  },
+  {
+   "prompt": "power tool",
+   "seed": 0
+  },
+  {
+   "prompt": "printer",
+   "seed": 0
+  },
+  {
+   "prompt": "purr",
+   "seed": 0
+  },
+  {
+   "prompt": "race car",
+   "seed": 0
+  },
+  {
+   "prompt": "train",
+   "seed": 0
+  },
+  {
+   "prompt": "rain",
+   "seed": 0
+  },
+  {
+   "prompt": "raindrop",
+   "seed": 0
+  },
+  {
+   "prompt": "ratchet",
+   "seed": 0
+  },
+  {
+   "prompt": "rattle",
+   "seed": 0
+  },
+  {
+   "prompt": "ringtone",
+   "seed": 0
+  },
+  {
+   "prompt": "run",
+   "seed": 0
+  },
+  {
+   "prompt": "sawing",
+   "seed": 0
+  },
+  {
+   "prompt": "scissors",
+   "seed": 0
+  },
+  {
+   "prompt": "scratching",
+   "seed": 0
+  },
+  {
+   "prompt": "screaming",
+   "seed": 0
+  },
+  {
+   "prompt": "screech",
+   "seed": 0
+  },
+  {
+   "prompt": "shatter",
+   "seed": 0
+  },
+  {
+   "prompt": "shout",
+   "seed": 0
+  },
+  {
+   "prompt": "sigh",
+   "seed": 0
+  },
+  {
+   "prompt": "singing",
+   "seed": 0
+  },
+  {
+   "prompt": "sink",
+   "seed": 0
+  },
+  {
+   "prompt": "siren",
+   "seed": 0
+  },
+  {
+   "prompt": "skateboard",
+   "seed": 0
+  },
+  {
+   "prompt": "slam",
+   "seed": 0
+  },
+  {
+   "prompt": "sliding door",
+   "seed": 0
+  },
+  {
+   "prompt": "snare drum",
+   "seed": 0
+  },
+  {
+   "prompt": "sneeze",
+   "seed": 0
+  },
+  {
+   "prompt": "speech",
+   "seed": 0
+  },
+  {
+   "prompt": "robot voice",
+   "seed": 0
+  },
+  {
+   "prompt": "splash",
+   "seed": 0
+  },
+  {
+   "prompt": "squeak",
+   "seed": 0
+  },
+  {
+   "prompt": "stream",
+   "seed": 0
+  },
+  {
+   "prompt": "strum",
+   "seed": 0
+  },
+  {
+   "prompt": "subway",
+   "seed": 0
+  },
+  {
+   "prompt": "tabla",
+   "seed": 0
+  },
+  {
+   "prompt": "tambourine",
+   "seed": 0
+  },
+  {
+   "prompt": "tap",
+   "seed": 0
+  },
+  {
+   "prompt": "tearing",
+   "seed": 0
+  },
+  {
+   "prompt": "telephone",
+   "seed": 0
+  },
+  {
+   "prompt": "thud",
+   "seed": 0
+  },
+  {
+   "prompt": "thunder",
+   "seed": 0
+  },
+  {
+   "prompt": "thunderstorm",
+   "seed": 0
+  },
+  {
+   "prompt": "tick",
+   "seed": 0
+  },
+  {
+   "prompt": "tick-tock",
+   "seed": 0
+  },
+  {
+   "prompt": "toilet flush",
+   "seed": 0
+  },
+  {
+   "prompt": "tools",
+   "seed": 0
+  },
+  {
+   "prompt": "traffic",
+   "seed": 0
+  },
+  {
+   "prompt": "trickle",
+   "seed": 0
+  },
+  {
+   "prompt": "truck",
+   "seed": 0
+  },
+  {
+   "prompt": "trumpet",
+   "seed": 0
+  },
+  {
+   "prompt": "typewriter",
+   "seed": 0
+  },
+  {
+   "prompt": "typing",
+   "seed": 0
+  },
+  {
+   "prompt": "car horn",
+   "seed": 0
+  },
+  {
+   "prompt": "footsteps",
+   "seed": 0
+  },
+  {
+   "prompt": "water",
+   "seed": 0
+  },
+  {
+   "prompt": "faucet",
+   "seed": 0
+  },
+  {
+   "prompt": "waves",
+   "seed": 0
+  },
+  {
+   "prompt": "whisper",
+   "seed": 0
+  },
+  {
+   "prompt": "whoosh",
+   "seed": 0
+  },
+  {
+   "prompt": "wind",
+   "seed": 0
+  },
+  {
+   "prompt": "wind chime",
+   "seed": 0
+  },
+  {
+   "prompt": "flute",
+   "seed": 0
+  },
+  {
+   "prompt": "wood",
+   "seed": 0
+  },
+  {
+   "prompt": "writing",
+   "seed": 0
+  },
+  {
+   "prompt": "yell",
+   "seed": 0
+  },
+  {
+   "prompt": "zipper",
+   "seed": 0
+  }
+ ]
+}

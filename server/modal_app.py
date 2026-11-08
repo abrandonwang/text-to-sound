@@ -34,8 +34,9 @@ image = (
     .pip_install_from_requirements("requirements.txt")
     .run_commands("git clone -q https://github.com/NVIDIA/BigVGAN /root/BigVGAN", PATCH)
     .run_function(download_pretrained)
-    .env({"WEIGHTS_DIR": "/weights", "BIGVGAN_DIR": "/root/BigVGAN"})
+    .env({"WEIGHTS_DIR": "/weights", "BIGVGAN_DIR": "/root/BigVGAN", "PROMPTS_FILE": "/root/good_prompts.json"})
     .add_local_python_source("app", "model")
+    .add_local_file("good_prompts.json", "/root/good_prompts.json")
 )
 
 weights = modal.Volume.from_name("tts-weights", create_if_missing = True)
