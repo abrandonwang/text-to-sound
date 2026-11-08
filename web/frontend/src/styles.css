@@ -57,6 +57,23 @@ button, input { font: inherit; color: inherit; }
 .stage-root:not(.view-idle) .prompt::before,
 .stage-root:not(.view-idle) .prompt::after { transform: scaleX(0); transition: transform 260ms var(--in); }
 
+/* autocorrect: a small "did you mean" line above the input */
+.suggest {
+  position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, 6px);
+  background: none; border: 0; padding: 6px 4px; cursor: pointer; white-space: nowrap;
+  font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em; color: rgba(244, 244, 248, 0.82);
+  opacity: 0; pointer-events: none;
+  transition: opacity 220ms var(--in), transform 220ms var(--in), color 200ms;
+}
+.suggest span { color: var(--dim); }
+.suggest.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; transition: opacity 320ms var(--out), transform 320ms var(--out), color 200ms; }
+.suggest:hover { color: var(--fg); }
+
+/* rejected prompt: the line and text flush red, then settle */
+.prompt.bleed::after { background: #ff2b3a; }
+.prompt.bleed input { animation: bleed 900ms var(--out); }
+@keyframes bleed { from { color: #ff4652; text-shadow: 0 0 18px rgba(255, 43, 58, 0.55); } }
+
 .prompt.shake { animation: shake 240ms linear; }
 @keyframes shake { 25% { margin-left: -4px; } 50% { margin-left: 4px; } 75% { margin-left: -4px; } }
 

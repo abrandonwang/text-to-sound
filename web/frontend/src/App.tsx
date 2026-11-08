@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { generate, type GenEvent, type MelImage } from './api'
 import { Finale } from './components/Finale'
 import { LedField, newScene, setMode, type LedMode } from './components/LedField'
 import { Sequence } from './components/Sequence'
 import { initialState, reducer } from './state'
+import { checkSound } from './vocab/match'
 
 type View = 'idle' | 'run' | 'finale' | 'error'
 const STAGE_MODES: LedMode[] = ['encode', 'denoise', 'decode', 'vocode']
@@ -25,6 +26,7 @@ export default function App() {
   const [prompt, setPrompt] = useState('')
   const [playing, setPlaying] = useState(false)
   const [shake, setShake] = useState(false)
+  const [bleed, setBleed] = useState(false)
   const scene = useRef(newScene())
   const resultMel = useRef<Uint8Array | null>(null)
   const audio = useRef<HTMLAudioElement>(null)
@@ -75,9 +77,24 @@ export default function App() {
     if (audio.current && s.result) audio.current.src = s.result.url
   }, [s.result])
 
+  // autocorrect: only sounds the model knows get through
+  const check = useMemo(() => checkSound(prompt), [prompt])
+  const shown = useRef('') // keep the last suggestion on screen while it fades out
+  if (check.suggestion) shown.current = check.suggestion
+  const accept = () => {
+    if (check.suggestion) setPrompt(check.suggestion)
+  }
+
   const run = useCallback(async () => {
-    const text = prompt.trim()
-    if (!text) {
+    const text = prompt.trim().toLowerCase()
+    if (!text || !check.ok) {
+      // not a sound we have: bleed red, shake, and swap in the suggestion (Enter again to go)
+      if (text) {
+        scene.current.alarm = performance.now()
+        setBleed(true)
+        later(900, () => setBleed(false))
+        accept()
+      }
       setShake(true)
       later(260, () => setShake(false))
       return
@@ -99,7 +116,7 @@ export default function App() {
     } catch (e) {
       if ((e as Error).name !== 'AbortError') onEvent({ type: 'error', message: String(e) })
     }
-  }, [prompt])
+  }, [prompt, check])
 
   // sequence finished: the last label rises away, a beat of blackout, then the slam
   const onSequenceDone = () => {
@@ -220,7 +237,7 @@ export default function App() {
       <main className={`stage-root view-${view}`}>
         <form
           ref={form}
-          className={`prompt ${shake ? 'shake' : ''}`}
+          className={`prompt ${shake ? 'shake' : ''} ${bleed ? 'bleed' : ''}`}
           data-quiet="small"
           onSubmit={(e) => {
             e.preventDefault()
@@ -246,6 +263,10 @@ export default function App() {
             }}
             onKeyDown={(e) => {
               if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) e.preventDefault()
+              if (e.key === 'Tab' && check.suggestion) {
+                e.preventDefault()
+                accept()
+              }
             }}
             onSelect={(e) => {
               const el = e.currentTarget
@@ -255,6 +276,17 @@ export default function App() {
             onFocus={() => (scene.current.focus = true)}
             onBlur={() => (scene.current.focus = false)}
           />
+          <button
+            type="button"
+            tabIndex={-1}
+            className={`suggest ${check.suggestion ? 'on' : ''}`}
+            data-quiet="small"
+            aria-hidden={!check.suggestion}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={accept}
+          >
+            <span>did you mean</span> {shown.current}
+          </button>
         </form>
 
         <Sequence s={s} active={view === 'run'} onStage={(i) => setMode(scene.current, STAGE_MODES[i])} onDone={onSequenceDone} />

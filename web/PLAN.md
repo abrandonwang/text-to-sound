@@ -25,6 +25,13 @@ in the middle), and a thin playhead moves across it while the audio plays. The o
 the next. A finale (`Finale.tsx`) fades the spectrogram in and shows the prompt, play, download and "make another". Text stays readable because the
 LED panel switches off its own LEDs around any `[data-quiet]` element.
 
+**Autocorrect:** prompts must be a sound the model knows. `src/vocab/sounds.ts` lists ~180
+short names built from the 200 FSD50K training labels, each with aliases ("woof" → bark,
+"ninja" → whoosh). `src/vocab/match.ts` picks the closest one (alias, plural/-ing, a known
+word inside the prompt, prefix, then typo distance). While typing, a "did you mean" line sits
+above the input (Tab or click accepts). Enter on an unknown prompt bleeds the glow red,
+shakes, and swaps in the suggestion; Enter again generates.
+
 ## 2. Architecture
 
 ```
