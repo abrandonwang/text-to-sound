@@ -1,0 +1,8 @@
+fastapi>=0.110
+uvicorn>=0.29
+numpy
+transformers
+huggingface_hub
+librosa
+scipy
+matplotlib
