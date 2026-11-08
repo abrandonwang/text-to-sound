@@ -25,12 +25,15 @@ in the middle), and a thin playhead moves across it while the audio plays. The o
 the next. A finale (`Finale.tsx`) fades the spectrogram in and shows the prompt, play, download and "make another". Text stays readable because the
 LED panel switches off its own LEDs around any `[data-quiet]` element.
 
-**Autocorrect:** prompts must be a sound the model knows. `src/vocab/sounds.ts` lists ~180
-short names built from the 200 FSD50K training labels, each with aliases ("woof" → bark,
-"ninja" → whoosh). `src/vocab/match.ts` picks the closest one (alias, plural/-ing, a known
-word inside the prompt, prefix, then typo distance). While typing, a "did you mean" line sits
-above the input (Tab or click accepts). Enter on an unknown prompt bleeds the glow red,
-shakes, and swaps in the suggestion; Enter again generates.
+**Suggestions (Krillion-style, never blocking):** free text up to 200 chars is allowed, since
+the model is conditioned on CLAP text embeddings and trained on full captions. Under the
+input, a quiet line offers the closest known-good prompts in three layers: exact/alias and
+typo fixes from the FSD50K names in `src/vocab/` (instant, local, 1-2 word prompts only),
+then matching by meaning from the server's `GET /suggest` (debounced 300 ms; top match
+must be >= 0.66 CLAP cosine, others >= 0.6 and within 0.1 of it, because junk input lands
+on a few "hub" prompts at ~0.6). Click a chip to generate it with its best seed; Tab fills
+in the top one; Enter always generates exactly what was typed. The page calls `/health`
+on load to wake the server. In mock mode only the local layer runs.
 
 ## 2. Architecture
 

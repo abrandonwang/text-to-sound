@@ -22,10 +22,9 @@ export interface Scene {
   playhead: number | null // 0..1 while audio plays
   level: number // audio loudness 0..1
   focus: boolean // input focused (idle glow brightens)
-  alarm: number // time of a rejected prompt: the glow bleeds red for a moment
 }
 
-export const newScene = (): Scene => ({ mode: 'idle', modeAt: 0, mel: null, noise: 0, playhead: null, level: 0, focus: false, alarm: 0 })
+export const newScene = (): Scene => ({ mode: 'idle', modeAt: 0, mel: null, noise: 0, playhead: null, level: 0, focus: false })
 export function setMode(s: Scene, mode: LedMode) {
   if (s.mode === mode) return
   s.mode = mode
@@ -152,6 +151,12 @@ export function LedField({ scene }: { scene: React.MutableRefObject<Scene> }) {
     let raf = 0
     const t0 = performance.now()
     const frame = (now: number) => {
+      // a window with no size yet (e.g. opening in a hidden pane): wait for a resize
+      if (!canvas.width || !canvas.height) {
+        if (window.innerWidth && window.innerHeight) resize()
+        raf = requestAnimationFrame(frame)
+        return
+      }
       const s = scene.current
       const t = ((now - t0) / 1000) * (reduced ? 0.25 : 1)
       const mode = s.mode
@@ -199,12 +204,9 @@ export function LedField({ scene }: { scene: React.MutableRefObject<Scene> }) {
       const gB = box ? box.bottom - box.height * 0.2 : 0
       const gcx = (gL + gR) / 2
       const gcy = (gT + gB) / 2
-      // rejected prompt: the backlight floods red and spreads out a little, then recovers
-      const ra = s.alarm ? Math.max(0, 1 - (now - s.alarm) / 1100) : 0
-      const red = ra * ra * (3 - 2 * ra) * 0.85
-      const reach = (150 + 70 * focusAmt + 25 * ra) * (0.3 + 0.7 * glow) // pulls inward as it fades
+      const reach = (150 + 70 * focusAmt) * (0.3 + 0.7 * glow) // pulls inward as it fades
       const breathe = reduced ? 0.85 : 0.74 + 0.26 * Math.sin(t * 0.9)
-      const gGain = glow * breathe * (0.6 + 0.4 * focusAmt) * (1 + 0.2 * red)
+      const gGain = glow * breathe * (0.6 + 0.4 * focusAmt)
 
       const data = img.data
       const mid = (rows - 1) / 2
@@ -232,15 +234,12 @@ export function LedField({ scene }: { scene: React.MutableRefObject<Scene> }) {
           // idle backlight
           let g = 0
           let gh = 0
-          let rk = 0 // red bleed, strongest right at the box and fading outward
           if (gGain > 0.005) {
             const px = (x + 0.5) * cell
             const py = (y + 0.5) * cell
             const dx = Math.max(gL - px, 0, px - gR)
             const dy = Math.max(gT - py, 0, py - gB)
-            const dd = Math.hypot(dx, dy * 1.15)
-            g = Math.exp(-dd / reach) * gGain
-            if (red > 0.001) rk = red * Math.exp(-dd / 160)
+            g = Math.exp(-Math.hypot(dx, dy * 1.15) / reach) * gGain
             if (!reduced) g *= 0.85 + 0.15 * Math.sin(t * 2.6 + thresh[y * cols + x] * 40)
             gh = (Math.floor((Math.atan2(py - gcy, (px - gcx) * 0.45) * 180) / Math.PI + 360 + t * 22) % 360) * 3
           }
@@ -251,12 +250,9 @@ export function LedField({ scene }: { scene: React.MutableRefObject<Scene> }) {
 
           const hue = (Math.floor(hueBase + d * 3.5) % 360) * 3
           const o = (y * cols + x) * 4
-          const gr = HUE[gh] + (255 - HUE[gh]) * rk
-          const gg = HUE[gh + 1] * (1 - rk) + 24 * rk
-          const gb = HUE[gh + 2] * (1 - rk) + 36 * rk
-          data[o] = 9 + HUE[hue] * b + gr * g + 255 * white
-          data[o + 1] = 9 + HUE[hue + 1] * b + gg * g + 255 * white
-          data[o + 2] = 13 + HUE[hue + 2] * b + gb * g + 255 * white
+          data[o] = 9 + HUE[hue] * b + HUE[gh] * g + 255 * white
+          data[o + 1] = 9 + HUE[hue + 1] * b + HUE[gh + 1] * g + 255 * white
+          data[o + 2] = 13 + HUE[hue + 2] * b + HUE[gh + 2] * g + 255 * white
           data[o + 3] = 255
         }
       }

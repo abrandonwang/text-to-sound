@@ -1,19 +1,24 @@
 import { SOUNDS } from './sounds'
 
-// Autocorrect a prompt to the closest sound the model knows.
-//   "rain"   -> ok
-//   "woof"   -> suggest "bark"     (known alias)
-//   "rian"   -> suggest "rain"     (typo, edit distance)
-//   "thund"  -> suggest "thunder"  (unfinished word)
-//   "ninja"  -> suggest "whoosh"   (closest thing we have)
+// Fast local first pass for prompt suggestions, Krillion-style: exact name or
+// alias, then typo fix. Matching by meaning happens on the server (/suggest).
+// Only short prompts (1-2 words) are checked here; longer free text is left to
+// the server, since full phrases often work better than a single label.
+//   "rain"   -> nothing (already a known sound)
+//   "woof"   -> "bark"     (alias)
+//   "dogs"   -> "dog"      (plural / -ing)
+//   "rian"   -> "rain"     (typo, edit distance)
+//   "thund"  -> "thunder"  (unfinished word)
+//   "pizza"  -> nothing    (no close spelling; the server matches by meaning)
 
-export interface Check {
-  ok: boolean
-  suggestion: string | null
+export interface LocalFix {
+  prompt: string
+  kind: 'alias' | 'complete' | 'typo'
 }
 
-const norm = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9\- ]/g, ' ').replace(/\s+/g, ' ').trim()
+/** Lowercase, single spaces: how prompts are compared and sent. */
+export const normPrompt = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
+const norm = (s: string) => normPrompt(s.replace(/[^a-zA-Z0-9\- ]/g, ' '))
 
 const NAMES = new Set(SOUNDS.map((s) => s.name))
 const KEYS: { key: string; name: string }[] = SOUNDS.flatMap((s) => [s.name, ...s.aliases].map((key) => ({ key, name: s.name })))
@@ -32,7 +37,7 @@ function dist(a: string, b: string) {
   return d[a.length][b.length]
 }
 
-/** "dogs" -> "dog", "barking" -> "bark", ... */
+/** "dogs" -> "dog", "barking" -> "bark", "woof" -> "bark" */
 function exactish(q: string) {
   for (const v of [q, q.replace(/s$/, ''), q.replace(/es$/, ''), q.replace(/ing$/, ''), q.replace(/ing$/, 'e')]) {
     const hit = EXACT.get(v)
@@ -41,31 +46,29 @@ function exactish(q: string) {
   return null
 }
 
-export function checkSound(input: string): Check {
+export function localSuggest(input: string): LocalFix | null {
   const q = norm(input)
-  if (!q) return { ok: false, suggestion: null }
-  if (q.length < 2) return { ok: false, suggestion: null } // too short to guess
-  if (NAMES.has(q)) return { ok: true, suggestion: null }
+  if (q.length < 2 || q.split(' ').length > 2 || NAMES.has(q)) return null
 
   const hit = exactish(q)
-  if (hit) return { ok: false, suggestion: hit }
+  if (hit) return { prompt: hit, kind: 'alias' }
 
-  // one known word inside a longer prompt ("loud rain") -> that sound
-  for (const w of q.split(' ').sort((a, b) => b.length - a.length)) {
-    const h = w.length >= 3 ? exactish(w) : null
-    if (h) return { ok: false, suggestion: h }
+  // unfinished word: "thund" -> "thunder" (shortest completion wins)
+  if (q.length >= 3) {
+    let best: { key: string; name: string } | null = null
+    for (const k of KEYS) if (k.key.startsWith(q) && (!best || k.key.length < best.key.length)) best = k
+    if (best) return { prompt: best.name, kind: 'complete' }
   }
 
-  let best = KEYS[0].name
-  let bestScore = Infinity
+  // typo: at most 2 edits, and no more than a third of the word
+  let best: string | null = null
+  let bestD = Infinity
   for (const { key, name } of KEYS) {
-    let score: number
-    if (q.length >= 2 && key.startsWith(q)) score = 0.1 * ((key.length - q.length) / key.length)
-    else score = dist(q, key) / Math.max(q.length, key.length)
-    if (score < bestScore) {
-      bestScore = score
+    const d = dist(q, key)
+    if (d < bestD && d <= 2 && d / Math.max(q.length, key.length) <= 0.34) {
+      bestD = d
       best = name
     }
   }
-  return { ok: false, suggestion: best }
+  return best ? { prompt: best, kind: 'typo' } : null
 }

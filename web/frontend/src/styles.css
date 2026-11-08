@@ -57,22 +57,25 @@ button, input { font: inherit; color: inherit; }
 .stage-root:not(.view-idle) .prompt::before,
 .stage-root:not(.view-idle) .prompt::after { transform: scaleX(0); transition: transform 260ms var(--in); }
 
-/* autocorrect: a small "did you mean" line above the input */
+/* suggestions: one quiet line under the input, "closest sounds  dog · a dog barking" */
 .suggest {
-  position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, 6px);
-  background: none; border: 0; padding: 6px 4px; cursor: pointer; white-space: nowrap;
-  font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em; color: rgba(244, 244, 248, 0.82);
+  position: absolute; left: 50%; top: 100%; width: max-content; max-width: min(680px, 86vw);
+  transform: translate(-50%, -4px); margin-top: 14px;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 2px 10px;
+  font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em;
   opacity: 0; pointer-events: none;
-  transition: opacity 220ms var(--in), transform 220ms var(--in), color 200ms;
+  transition: opacity 220ms var(--in), transform 220ms var(--in);
 }
-.suggest span { color: var(--dim); }
-.suggest.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; transition: opacity 320ms var(--out), transform 320ms var(--out), color 200ms; }
-.suggest:hover { color: var(--fg); }
-
-/* rejected prompt: the line and text flush red, then settle */
-.prompt.bleed::after { background: #ff2b3a; }
-.prompt.bleed input { animation: bleed 900ms var(--out); }
-@keyframes bleed { from { color: #ff4652; text-shadow: 0 0 18px rgba(255, 43, 58, 0.55); } }
+.suggest.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; transition: opacity 320ms var(--out), transform 320ms var(--out); }
+.suggest-label, .suggest-dot { color: var(--dim); }
+.suggest-label { margin-right: 4px; }
+.suggest button {
+  background: none; border: 0; padding: 6px 0; cursor: pointer; white-space: nowrap;
+  font: inherit; letter-spacing: inherit; color: rgba(244, 244, 248, 0.82);
+  background-image: var(--rainbow); background-repeat: no-repeat; background-position: left 85%; background-size: 0% 1px;
+  transition: color 200ms, background-size 240ms var(--out);
+}
+.suggest button:hover { color: var(--fg); background-size: 100% 1px; }
 
 .prompt.shake { animation: shake 240ms linear; }
 @keyframes shake { 25% { margin-left: -4px; } 50% { margin-left: 4px; } 75% { margin-left: -4px; } }
@@ -132,6 +135,9 @@ button, input { font: inherit; color: inherit; }
   opacity: 0; transition: opacity 300ms var(--in);
 }
 .finale.on .title { opacity: 1; transition: opacity 200ms; }
+/* free-text prompts can be long: step the size down so they stay above the spectrogram */
+.title.is-long { font-size: clamp(26px, 3.4vw, 48px); }
+.title.is-longer { font-size: clamp(19px, 2.3vw, 32px); line-height: 1.15; }
 .word { white-space: nowrap; }
 .ch { display: inline-block; animation: ch-in 700ms var(--out) both; }
 @keyframes ch-in { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } }
@@ -181,6 +187,7 @@ button, input { font: inherit; color: inherit; }
   .title { top: 11vh; }
   .controls { gap: 22px; }
   .controls button, .controls a { padding: 14px 2px; }
+  .suggest button { padding: 10px 0; }
   .sig { font-size: 12px; }
 }
 
