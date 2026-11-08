@@ -4,13 +4,14 @@ Pipeline: prompt -> CLAP text embedding -> DDIM + CFG on 4x20x64 latents
 -> VAE decoder -> 80x256 mel -> BigVGAN -> 22.05 kHz wav.
 
 Needs these files next to it: unet_fsd_ema.pt, vae_gan2.pt, mel_stats.npy
-Run locally:  uvicorn app:app --port 8000
+Run locally:  python app.py   (port 7860)
 """
 
 import base64
 import io
 import json
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -27,34 +28,46 @@ from transformers import ClapModel, ClapProcessor
 from model import SCALE, T, Autoencoder, UNet
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "BigVGAN"))
+WEIGHTS = os.environ.get("WEIGHTS_DIR", HERE)  # unet, vae, mel_stats live here
+BIGVGAN_DIR = os.environ.get("BIGVGAN_DIR", os.path.join(HERE, "BigVGAN"))
+if not os.path.isdir(BIGVGAN_DIR):
+    subprocess.run(["git", "clone", "-q", "https://github.com/NVIDIA/BigVGAN", BIGVGAN_DIR], check = True)
+# same huggingface_hub patch the notebooks apply with sed
+_p = os.path.join(BIGVGAN_DIR, "bigvgan.py")
+_src = open(_p).read()
+_new = _src.replace("proxies: Optional[Dict],", "proxies: Optional[Dict] = None,").replace(
+    "resume_download: bool,", "resume_download: bool = False,")
+if _new != _src:
+    open(_p, "w").write(_new)
+sys.path.insert(0, BIGVGAN_DIR)
 import bigvgan  # noqa: E402
 
 SR = 22050
 UNET_FILE = os.environ.get("UNET_FILE", "unet_fsd_ema.pt")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 torch.set_num_threads(os.cpu_count() or 2)
 torch.set_grad_enabled(False)
 
 # ---------- load everything once ----------
-betas = torch.linspace(0.0001, 0.02, T)
+betas = torch.linspace(0.0001, 0.02, T, device = DEVICE)
 alpha_bar = torch.cumprod(1 - betas, dim = 0)
 
 unet = UNet()
-unet.load_state_dict(torch.load(os.path.join(HERE, UNET_FILE), map_location = "cpu"))
-unet.eval()
+unet.load_state_dict(torch.load(os.path.join(WEIGHTS, UNET_FILE), map_location = "cpu"))
+unet = unet.eval().to(DEVICE)
 
 vae = Autoencoder()
-vae.load_state_dict(torch.load(os.path.join(HERE, "vae_gan2.pt"), map_location = "cpu"))
-vae.eval()
+vae.load_state_dict(torch.load(os.path.join(WEIGHTS, "vae_gan2.pt"), map_location = "cpu"))
+vae = vae.eval().to(DEVICE)
 
-MIN, MAX = np.load(os.path.join(HERE, "mel_stats.npy"))
+MIN, MAX = np.load(os.path.join(WEIGHTS, "mel_stats.npy"))
 
-clap = ClapModel.from_pretrained("laion/clap-htsat-unfused").eval()
+clap = ClapModel.from_pretrained("laion/clap-htsat-unfused").eval().to(DEVICE)
 proc = ClapProcessor.from_pretrained("laion/clap-htsat-unfused")
 
 vocoder = bigvgan.BigVGAN.from_pretrained("nvidia/bigvgan_v2_22khz_80band_256x", use_cuda_kernel = False)
 vocoder.remove_weight_norm()
-vocoder.eval()
+vocoder = vocoder.eval().to(DEVICE)
 
 lock = threading.Lock()
 waiting = 0
@@ -71,7 +84,7 @@ app.add_middleware(
 
 # ---------- helpers ----------
 def text_embedding(prompt):
-    t_in = proc(text = [prompt], return_tensors = "pt", padding = True)
+    t_in = proc(text = [prompt], return_tensors = "pt", padding = True).to(DEVICE)
     out = clap.get_text_features(**t_in)
     c = out if torch.is_tensor(out) else out.pooler_output
     return F.normalize(c, dim = 1)
@@ -83,7 +96,7 @@ def latent_to_mel(z):
 
 
 def mel_img(mel):
-    m = ((mel[0, 0].numpy() + 1) / 2).clip(0, 1)
+    m = ((mel[0, 0].float().cpu().numpy() + 1) / 2).clip(0, 1)
     return {"bins": 80, "frames": 256, "data": base64.b64encode((m * 255).round().astype(np.uint8).tobytes()).decode()}
 
 
@@ -122,7 +135,7 @@ def run(prompt, guidance, steps, seed):
                 yield sse({"type": "stage_start", "stage": "encode"})
                 s = time.perf_counter()
                 c = text_embedding(prompt)
-                bars = c[0].view(64, 8).mean(1)
+                bars = c[0].view(64, 8).mean(1).cpu()
                 bars = (bars / (bars.abs().max() + 1e-8)).round(decimals = 3).tolist()
                 yield sse({"type": "embedding", "values": bars})
                 yield sse({"type": "stage_end", "stage": "encode", "ms": ms(s), "info": "512-d CLAP embedding"})
@@ -131,16 +144,16 @@ def run(prompt, guidance, steps, seed):
                 yield sse({"type": "stage_start", "stage": "denoise"})
                 s = time.perf_counter()
                 g = torch.Generator().manual_seed(seed)
-                x = torch.randn(1, 4, 20, 64, generator = g)
+                x = torch.randn(1, 4, 20, 64, generator = g).to(DEVICE)
                 cc = torch.cat([c, torch.zeros_like(c)])
                 ts = np.linspace(T - 1, 0, steps).round().astype(int)
                 for i, t in enumerate(ts):
                     st = time.perf_counter()
-                    t_batch = torch.full((2,), int(t))
+                    t_batch = torch.full((2,), int(t), device = DEVICE)
                     eps_label, eps_none = unet(torch.cat([x, x]), t_batch, cc).chunk(2)
                     eps = eps_none + guidance * (eps_label - eps_none)
                     ab = alpha_bar[t]
-                    ab_prev = alpha_bar[ts[i + 1]] if i + 1 < len(ts) else torch.tensor(1.0)
+                    ab_prev = alpha_bar[ts[i + 1]] if i + 1 < len(ts) else torch.tensor(1.0, device = DEVICE)
                     x0 = (x - torch.sqrt(1 - ab) * eps) / torch.sqrt(ab)
                     x = torch.sqrt(ab_prev) * x0 + torch.sqrt(1 - ab_prev) * eps
                     step = i + 1
@@ -162,7 +175,7 @@ def run(prompt, guidance, steps, seed):
                 yield sse({"type": "stage_start", "stage": "vocode"})
                 s = time.perf_counter()
                 m = (mel + 1) / 2 * (MAX - MIN) + MIN
-                audio = vocoder(m.squeeze(1).float())[0, 0].numpy()
+                audio = vocoder(m.squeeze(1).float())[0, 0].cpu().numpy()
                 secs = len(audio) / SR
                 yield sse({"type": "stage_end", "stage": "vocode", "ms": ms(s), "info": f"{secs:.2f} s @ 22.05 kHz"})
 
@@ -178,7 +191,7 @@ def run(prompt, guidance, steps, seed):
 @app.get("/")
 @app.get("/health")
 def health():
-    return {"ok": True, "mock": False, "unet": UNET_FILE}
+    return {"ok": True, "mock": False, "unet": UNET_FILE, "device": DEVICE}
 
 
 @app.get("/generate")
@@ -190,3 +203,8 @@ def generate(
 ):
     return StreamingResponse(run(prompt, guidance, steps, seed), media_type = "text/event-stream",
                              headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+if __name__ == "__main__":  # local run: python app.py
+    import uvicorn
+    uvicorn.run(app, host = "0.0.0.0", port = int(os.environ.get("PORT", 7860)))

@@ -1,13 +1,3 @@
----
-title: text-to-sound
-emoji: 🔊
-colorFrom: gray
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # text-to-sound model server
 
 The backend for https://abrandonwang.github.io/text-to-sound/.
@@ -17,21 +7,24 @@ The backend for https://abrandonwang.github.io/text-to-sound/.
 Pipeline: CLAP text embedding → 50 DDIM steps with classifier-free guidance on 4 × 20 × 64 latents
 → VAE decoder → 80 × 256 mel → BigVGAN → 3 s of 22.05 kHz audio.
 
-## Deploying to a Hugging Face Space
-
-1. Create a Space: SDK **Docker**, template **Blank**, hardware **CPU basic** (free).
-2. Upload everything in this folder, plus these three files from Google Drive:
-   - `checkpoints/unet_fsd_ema.pt`
-   - `checkpoints/vae_gan2.pt`
-   - `data/mel_stats.npy`
-3. Wait for the build (about 5–10 min the first time). `https://<user>-<space>.hf.space/health` should return `{"ok": true}`.
-
-## Running locally
-
-Put the three files above in this folder, then:
+## Deploy on Modal (T4 GPU, scales to zero)
 
 ```bash
-pip install torch -r requirements.txt
-git clone https://github.com/NVIDIA/BigVGAN
-uvicorn app:app --port 8000
+pip install modal && modal setup
+modal volume create tts-weights
+modal volume put tts-weights unet_fsd_ema.pt /     # from Drive checkpoints/
+modal volume put tts-weights vae_gan2.pt /         # from Drive checkpoints/
+modal volume put tts-weights mel_stats.npy /       # from Drive data/
+cd server && modal deploy modal_app.py
+```
+
+The deploy prints the URL. Set it as the `API_URL` repository variable on GitHub and rerun the Pages workflow.
+
+## Run locally (CPU)
+
+Put the three weight files in this folder, then:
+
+```bash
+pip install -r requirements.txt
+python app.py
 ```
