@@ -239,6 +239,19 @@ export default function App() {
             onChange={(e) => {
               setPrompt(e.target.value)
             }}
+            // caret is locked to the end: just type and delete
+            onMouseDown={(e) => {
+              e.preventDefault()
+              input.current?.focus()
+            }}
+            onKeyDown={(e) => {
+              if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) e.preventDefault()
+            }}
+            onSelect={(e) => {
+              const el = e.currentTarget
+              const end = el.value.length
+              if (el.selectionStart !== end || el.selectionEnd !== end) el.setSelectionRange(end, end)
+            }}
             onFocus={() => (scene.current.focus = true)}
             onBlur={() => (scene.current.focus = false)}
           />
