@@ -17,6 +17,7 @@ import threading
 import time
 import wave
 
+import librosa
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -106,8 +107,19 @@ with torch.inference_mode():
     GOOD_EMB = torch.cat([text_embedding([g["prompt"] for g in GOOD[i:i + 64]]) for i in range(0, len(GOOD), 64)])
 
 
+def audio_embedding(wavs):
+    """List of 22.05 kHz numpy wavs -> [n, 512] CLAP unit vectors (CLAP wants 48 kHz)."""
+    a48 = [librosa.resample(w, orig_sr = SR, target_sr = 48000) for w in wavs]
+    try:
+        inp = proc(audio = a48, sampling_rate = 48000, return_tensors = "pt")
+    except TypeError:  # older transformers call it "audios"
+        inp = proc(audios = a48, sampling_rate = 48000, return_tensors = "pt")
+    out = clap.get_audio_features(**inp.to(DEVICE))
+    return F.normalize(out if torch.is_tensor(out) else out.pooler_output, dim = 1)
+
+
 def latent_to_mel(z):
-    """Scaled latent [1, 4, 20, 64] -> mel in [-1, 1], shape [1, 1, 80, 256]."""
+    """Scaled latent [n, 4, 20, 64] -> mel in [-1, 1], shape [n, 1, 80, 256]."""
     return vae.decoder(z / SCALE).clamp(-1, 1)
 
 
@@ -134,7 +146,7 @@ def ms(start):
     return round((time.perf_counter() - start) * 1000)
 
 
-def run(prompt, guidance, steps, seed):
+def run(prompt, guidance, steps, seed, n):
     """Sync generator of SSE strings. FastAPI runs it in a worker thread."""
     global waiting
     t0 = time.perf_counter()
@@ -156,16 +168,18 @@ def run(prompt, guidance, steps, seed):
                 yield sse({"type": "embedding", "values": bars})
                 yield sse({"type": "stage_end", "stage": "encode", "ms": ms(s), "info": "512-d CLAP embedding"})
 
-                # 2. DDIM + CFG (cond and uncond in one batch of 2)
+                # 2. DDIM + CFG on n candidates at once (cond and uncond in one batch of 2n).
+                # Candidate 0 gets the same noise a single-sample run with this seed would.
                 yield sse({"type": "stage_start", "stage": "denoise"})
                 s = time.perf_counter()
                 g = torch.Generator().manual_seed(seed)
-                x = torch.randn(1, 4, 20, 64, generator = g).to(DEVICE)
-                cc = torch.cat([c, torch.zeros_like(c)])
+                x = torch.randn(n, 4, 20, 64, generator = g).to(DEVICE)
+                cn = c.expand(n, -1)
+                cc = torch.cat([cn, torch.zeros_like(cn)])
                 ts = np.linspace(T - 1, 0, steps).round().astype(int)
                 for i, t in enumerate(ts):
                     st = time.perf_counter()
-                    t_batch = torch.full((2,), int(t), device = DEVICE)
+                    t_batch = torch.full((2 * n,), int(t), device = DEVICE)
                     eps_label, eps_none = unet(torch.cat([x, x]), t_batch, cc).chunk(2)
                     eps = eps_none + guidance * (eps_label - eps_none)
                     ab = alpha_bar[t]
@@ -176,24 +190,31 @@ def run(prompt, guidance, steps, seed):
                     ev = {"type": "denoise_step", "step": step, "total": steps, "timestep": int(t),
                           "noise": float(torch.sqrt(1 - ab)), "ms": ms(st)}
                     if step == 1 or step % 5 == 0 or step == steps:
-                        ev["preview"] = mel_img(latent_to_mel(x0))
+                        ev["preview"] = mel_img(latent_to_mel(x0[:1]))
                     yield sse(ev)
                 yield sse({"type": "stage_end", "stage": "denoise", "ms": ms(s),
-                           "info": f"{steps} DDIM steps · cfg {guidance:.1f}"})
+                           "info": f"{steps} DDIM steps · cfg {guidance:.1f}" + (f" · {n} takes" if n > 1 else "")})
 
                 # 3. VAE decode
                 yield sse({"type": "stage_start", "stage": "decode"})
                 s = time.perf_counter()
-                mel = latent_to_mel(x)
+                mels = latent_to_mel(x)
                 yield sse({"type": "stage_end", "stage": "decode", "ms": ms(s), "info": "80 × 256 log-mel"})
 
-                # 4. BigVGAN
+                # 4. BigVGAN, then CLAP keeps the take that best matches the prompt
                 yield sse({"type": "stage_start", "stage": "vocode"})
                 s = time.perf_counter()
-                m = (mel + 1) / 2 * (MAX - MIN) + MIN
-                audio = vocoder(m.squeeze(1).float())[0, 0].cpu().numpy()
+                m = (mels + 1) / 2 * (MAX - MIN) + MIN
+                wavs = vocoder(m.squeeze(1).float())[:, 0].cpu().numpy()
+                best, info = 0, ""
+                if n > 1:
+                    sims = (audio_embedding(list(wavs)) @ c.T)[:, 0]
+                    best = int(sims.argmax())
+                    info = f" · best of {n} (CLAP {float(sims[best]):.2f})"
+                audio, mel = wavs[best], mels[best:best + 1]
                 secs = len(audio) / SR
-                yield sse({"type": "stage_end", "stage": "vocode", "ms": ms(s), "info": f"{secs:.2f} s @ 22.05 kHz"})
+                yield sse({"type": "stage_end", "stage": "vocode", "ms": ms(s),
+                           "info": f"{secs:.2f} s @ 22.05 kHz" + info})
 
             yield sse({"type": "result", "mel": mel_img(mel), "sampleRate": SR, "seconds": secs, "wav": wav_b64(audio)})
             yield sse({"type": "done", "totalMs": ms(t0)})
@@ -230,8 +251,9 @@ def generate(
     guidance: float = Query(3.0, ge = 1, le = 10),
     steps: int = Query(50, ge = 1, le = 100),
     seed: int = 0,
+    n: int = Query(4, ge = 1, le = 8),   # takes generated; CLAP picks the best
 ):
-    return StreamingResponse(run(prompt, guidance, steps, seed), media_type = "text/event-stream",
+    return StreamingResponse(run(prompt, guidance, steps, seed, n), media_type = "text/event-stream",
                              headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
