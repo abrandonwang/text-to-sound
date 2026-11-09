@@ -1,19 +1,19 @@
 import { SOUNDS } from './sounds'
 
-// Fast local first pass for prompt suggestions, Krillion-style: exact name or
-// alias, then typo fix. Matching by meaning happens on the server (/suggest).
-// Only short prompts (1-2 words) are checked here; longer free text is left to
-// the server, since full phrases often work better than a single label.
+// Local half of the prompt help. Matching by meaning happens on the server
+// (/suggest). Only short prompts (1-2 words) are checked here; longer free text
+// is left alone, since full phrases work better than a single label.
+//   completion("thund") -> "er"      (finishes the word, shown dimmed in the input)
+//   localSuggest:
 //   "rain"   -> nothing (already a known sound)
-//   "woof"   -> "bark"     (alias)
-//   "dogs"   -> "dog"      (plural / -ing)
-//   "rian"   -> "rain"     (typo, edit distance)
-//   "thund"  -> "thunder"  (unfinished word)
-//   "pizza"  -> nothing    (no close spelling; the server matches by meaning)
+//   "dogs"   -> nothing (just a plural, fine as typed)
+//   "woof"   -> "bark"  (different word for a sound we know)
+//   "rian"   -> "rain"  (typo, edit distance)
+//   "pizza"  -> nothing (no close spelling; the server matches by meaning)
 
 export interface LocalFix {
   prompt: string
-  kind: 'alias' | 'complete' | 'typo'
+  kind: 'alias' | 'typo'
 }
 
 /** Lowercase, single spaces: how prompts are compared and sent. */
@@ -46,19 +46,22 @@ function exactish(q: string) {
   return null
 }
 
+/** The rest of a half-typed sound name: "thund" -> "er", "" if there's nothing to finish. */
+export function completion(input: string) {
+  const q = input.toLowerCase().trimStart()
+  if (q.length < 3 || EXACT.has(q.trim())) return ''
+  let best = ''
+  for (const { key } of KEYS) if (key.length > q.length && key.startsWith(q) && (!best || key.length < best.length)) best = key
+  return best.slice(q.length)
+}
+
 export function localSuggest(input: string): LocalFix | null {
   const q = norm(input)
   if (q.length < 2 || q.split(' ').length > 2 || NAMES.has(q)) return null
 
   const hit = exactish(q)
-  if (hit) return { prompt: hit, kind: 'alias' }
-
-  // unfinished word: "thund" -> "thunder" (shortest completion wins)
-  if (q.length >= 3) {
-    let best: { key: string; name: string } | null = null
-    for (const k of KEYS) if (k.key.startsWith(q) && (!best || k.key.length < best.key.length)) best = k
-    if (best) return { prompt: best.name, kind: 'complete' }
-  }
+  // "barking" or "dogs" are fine as typed: only offer a genuinely different word
+  if (hit) return q.slice(0, 3) === hit.slice(0, 3) ? null : { prompt: hit, kind: 'alias' }
 
   // typo: at most 2 edits, and no more than a third of the word
   let best: string | null = null

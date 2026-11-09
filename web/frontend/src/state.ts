@@ -7,69 +7,57 @@ export interface Take {
   seconds: number
 }
 
-// One run is several takes generated one after another. A stage only counts as
-// done once every take has been through it.
+// One run is several takes generated one after another, so `settled` is also
+// the index of the take being made right now. `phase` is what the server is
+// doing for that take; 'wait' means it hasn't started on it yet.
 export interface RunState {
   prompt: string
   count: number
-  stages: Record<StageId, 'idle' | 'active' | 'done'>
-  ended: Record<StageId, number> // how many takes have finished each stage
-  steps: number[] // denoising steps finished, per take
+  phase: 'wait' | StageId
+  ahead: number // generations in front of this take, until the server starts on it
+  step: number // denoising steps finished in this take
   total: number // denoising steps per take
+  vocodeMs: number // how long the last take spent making audio
   takes: Take[]
-  failed: number
   settled: number // takes that have finished, one way or the other
   error?: string
 }
 
-const idleStages = (): RunState['stages'] => ({ encode: 'idle', denoise: 'idle', decode: 'idle', vocode: 'idle' })
-const noneEnded = (): RunState['ended'] => ({ encode: 0, denoise: 0, decode: 0, vocode: 0 })
-
 export const initialState: RunState = {
   prompt: '',
   count: TAKES,
-  stages: idleStages(),
-  ended: noneEnded(),
-  steps: [],
+  phase: 'wait',
+  ahead: 0,
+  step: 0,
   total: 0,
+  vocodeMs: 1500,
   takes: [],
-  failed: 0,
   settled: 0,
 }
 
 export type Action =
   | { type: 'start'; prompt: string; steps: number; count: number }
-  | { type: 'event'; ev: GenEvent; take: number; url?: string }
+  | { type: 'event'; ev: GenEvent; url?: string }
 
 export function reducer(s: RunState, a: Action): RunState {
-  if (a.type === 'start')
-    return { ...initialState, stages: idleStages(), ended: noneEnded(), prompt: a.prompt, total: a.steps, count: a.count, steps: Array(a.count).fill(0) }
+  if (a.type === 'start') return { ...initialState, prompt: a.prompt, total: a.steps, count: a.count }
 
-  const { ev, take, url } = a
+  const { ev, url } = a
   switch (ev.type) {
+    case 'queued': // position counts others waiting, not the one being generated
+      return { ...s, ahead: ev.position + 1 }
     case 'stage_start':
-      return s.stages[ev.stage] === 'done' ? s : { ...s, stages: { ...s.stages, [ev.stage]: 'active' } }
-    case 'stage_end': {
-      const n = s.ended[ev.stage] + 1
-      return {
-        ...s,
-        ended: { ...s.ended, [ev.stage]: n },
-        stages: { ...s.stages, [ev.stage]: n + s.failed >= s.count ? 'done' : 'active' },
-      }
-    }
+      return { ...s, phase: ev.stage, ahead: 0 }
+    case 'stage_end':
+      return ev.stage === 'vocode' ? { ...s, vocodeMs: ev.ms } : s
     case 'denoise_step':
-      return { ...s, total: ev.total, steps: s.steps.map((v, i) => (i === take ? ev.step : v)) }
+      return { ...s, step: ev.step, total: ev.total }
     case 'result':
       return url ? { ...s, takes: [...s.takes, { url, seconds: ev.seconds }] } : s
     case 'done':
-      return { ...s, settled: s.settled + 1 }
-    case 'error': {
-      // a failed take stops counting towards every stage it never finished
-      const failed = s.failed + 1
-      const stages = { ...s.stages }
-      for (const k of Object.keys(stages) as StageId[]) if (s.ended[k] + failed >= s.count) stages[k] = 'done'
-      return { ...s, failed, stages, settled: s.settled + 1, error: ev.message }
-    }
+      return { ...s, phase: 'wait', step: 0, ahead: 0, settled: s.settled + 1 }
+    case 'error':
+      return { ...s, phase: 'wait', step: 0, ahead: 0, settled: s.settled + 1, error: ev.message }
     default:
       return s
   }

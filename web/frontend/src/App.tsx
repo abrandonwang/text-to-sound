@@ -1,10 +1,10 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { generate, suggest, wakeServer, type GenEvent, type SuggestResult } from './api'
 import { Finale } from './components/Finale'
 import { LedField, newScene } from './components/LedField'
 import { Sequence } from './components/Sequence'
 import { TAKES, initialState, reducer, wavUrl } from './state'
-import { localSuggest, normPrompt } from './vocab/match'
+import { completion, localSuggest, normPrompt } from './vocab/match'
 
 type View = 'idle' | 'run' | 'finale' | 'error'
 
@@ -12,11 +12,10 @@ type View = 'idle' | 'run' | 'finale' | 'error'
 // trained on full captions); the server accepts up to 200 characters.
 export const MAX_PROMPT = 200
 // How close by meaning (CLAP cosine) a server match must be to show. Junk input
-// ("pizza", "asdf") still lands on a few "hub" prompts at 0.60-0.65, so the top
-// match needs 0.66, and the others must also be within 0.1 of the top one.
-const MIN_TOP = 0.66
-const MIN_REST = 0.6
-const MAX_GAP = 0.1
+// ("pizza", "asdf") still lands on a few "hub" prompts at 0.60-0.65.
+const MIN_MATCH = 0.66
+const PAUSE_MS = 500 // a suggestion only appears once typing stops
+const MAX_WORDS = 3 // longer prompts are already descriptive: leave them alone
 const measureCtx = document.createElement('canvas').getContext('2d')!
 
 export default function App() {
@@ -37,13 +36,13 @@ export default function App() {
     timers.current = []
   }
 
-  const onEvent = (ev: GenEvent, take: number) => {
+  const onEvent = (ev: GenEvent) => {
     let url: string | undefined
     if (ev.type === 'result') {
       url = wavUrl(ev.wav)
       urls.current.push(url)
     }
-    dispatch({ type: 'event', ev, take, url })
+    dispatch({ type: 'event', ev, url })
   }
 
   // the model server sleeps when idle: start waking it as soon as the page opens
@@ -51,25 +50,31 @@ export default function App() {
     wakeServer()
   }, [])
 
-  // Suggestions, Krillion-style: a local typo fix first (instant), then the
-  // server's closest known-good prompts by meaning (debounced). They never
-  // block: Enter always generates exactly what was typed.
+  // Help while typing, at most one thing at a time and never in the way. Enter
+  // always generates exactly what was typed; Tab takes the offer.
+  //  - half-typed sound name: the rest appears dimmed inside the input
+  //  - otherwise, once typing stops: one suggestion under it (typo fix or a
+  //    different word first, then the server's closest match by meaning)
   const q = normPrompt(prompt)
+  const rest = useMemo(() => completion(prompt), [prompt])
   const local = useMemo(() => localSuggest(prompt), [prompt])
-  const [remote, setRemote] = useState<SuggestResult | null>(null)
+  const [remote, setRemote] = useState<{ q: string; r: SuggestResult } | null>(null)
+  const [paused, setPaused] = useState(false)
   const seeds = useRef(new Map<string, number>()) // known-good prompt -> the seed that sounds best
   useEffect(() => {
+    setPaused(false)
+    const id = setTimeout(() => setPaused(true), PAUSE_MS)
+    return () => clearTimeout(id)
+  }, [q])
+  useEffect(() => {
     const ask = suggest // null in mock mode: local matching only
-    if (!ask || q.length < 2 || view !== 'idle') {
-      setRemote(null)
-      return
-    }
+    if (!ask || q.length < 3 || q.split(' ').length > MAX_WORDS || view !== 'idle') return
     const ctl = new AbortController()
     const id = setTimeout(() => {
       ask(q, ctl.signal)
         .then((r) => {
           r.suggestions.forEach((x) => seeds.current.set(x.prompt, x.seed))
-          setRemote(r)
+          setRemote({ q, r })
         })
         .catch(() => {})
     }, 300)
@@ -78,28 +83,26 @@ export default function App() {
       ctl.abort()
     }
   }, [q, view])
-  const chips = useMemo(() => {
-    const out: string[] = local ? [local.prompt] : []
-    const top = remote?.suggestions[0]
-    if (remote && top && (remote.exact || top.similarity >= MIN_TOP))
-      remote.suggestions.forEach((x, i) => {
-        // exact hit: the top one is what was typed, so offer close phrasings of it instead
-        if (remote.exact ? x.similarity >= MIN_TOP : i === 0 || (x.similarity >= MIN_REST && top.similarity - x.similarity <= MAX_GAP))
-          out.push(x.prompt)
-      })
-    return [...new Set(out)].filter((c) => c !== q).slice(0, 3)
-  }, [local, remote, q])
-  // keep the last chips on screen while they fade out
-  const shown = useRef({ chips: [] as string[], typo: false })
-  if (chips.length) shown.current = { chips, typo: !!local && chips[0] === local.prompt }
+  const hint = useMemo(() => {
+    if (rest) return null
+    if (local) return { text: local.prompt, label: local.kind === 'typo' ? 'did you mean' : 'try' }
+    if (remote?.q !== q || remote.r.exact) return null
+    const top = remote.r.suggestions[0]
+    return top && top.similarity >= MIN_MATCH && top.prompt !== q ? { text: top.prompt, label: 'try' } : null
+  }, [rest, local, remote, q])
+  const hintOn = !!hint && paused && view === 'idle'
+  // keep the last suggestion on screen while it fades out
+  const shown = useRef({ text: '', label: '' })
+  if (hint && hintOn) shown.current = hint
 
-  const pick = (c: string) => {
-    setPrompt(c)
-    run(c)
+  // fills the box and leaves the choice to Enter; a run is never started from here
+  const accept = (text: string) => {
+    setPrompt(text)
+    input.current?.focus()
   }
 
-  const run = async (override?: string) => {
-    const text = normPrompt(override ?? prompt)
+  const run = async () => {
+    const text = normPrompt(prompt)
     if (!text) {
       setShake(true)
       later(260, () => setShake(false))
@@ -125,11 +128,11 @@ export default function App() {
         for await (const ev of generate({ prompt: text, guidance: 3, steps: 50, seed }, ctl.signal)) {
           if (ctl.signal.aborted) return
           if (ev.type === 'result') made++
-          onEvent(ev, take)
+          onEvent(ev)
         }
       } catch (e) {
         if ((e as Error).name === 'AbortError') return
-        onEvent({ type: 'error', message: String(e) }, take)
+        onEvent({ type: 'error', message: String(e) })
       }
       if (ctl.signal.aborted) return
     }
@@ -182,7 +185,7 @@ export default function App() {
     measureCtx.font = `400 ${base}px Geist, system-ui, sans-serif`
     const w = measureCtx.measureText(prompt || el.placeholder).width * 1.02
     const fit = Math.max(0.5, Math.min(1, (el.clientWidth - 24) / Math.max(1, w)))
-    el.style.fontSize = `${base * fit}px`
+    form.current?.style.setProperty('--fit', `${base * fit}px`)
   })
 
   // the input can't be reached while it's hidden
@@ -224,9 +227,12 @@ export default function App() {
             }}
             onKeyDown={(e) => {
               if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) e.preventDefault()
-              if (e.key === 'Tab' && chips.length) {
+              if ((e.key === 'Tab' || e.key === 'ArrowRight') && rest) {
                 e.preventDefault()
-                setPrompt(chips[0])
+                accept(prompt + rest)
+              } else if (e.key === 'Tab' && hintOn && hint) {
+                e.preventDefault()
+                accept(hint.text)
               }
             }}
             onSelect={(e) => {
@@ -237,16 +243,23 @@ export default function App() {
             onFocus={() => (scene.current.focus = true)}
             onBlur={() => (scene.current.focus = false)}
           />
-          <div className={`suggest ${chips.length ? 'on' : ''}`} data-quiet="small" aria-hidden={!chips.length}>
-            <span className="suggest-label">{shown.current.typo ? 'did you mean' : 'closest sounds'}</span>
-            {shown.current.chips.map((c, i) => (
-              <Fragment key={c}>
-                {i > 0 && <span className="suggest-dot">·</span>}
-                <button type="button" tabIndex={-1} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(c)}>
-                  {c}
-                </button>
-              </Fragment>
-            ))}
+          {rest && (
+            // the typed text is invisible here: it only holds the dimmed rest in the right place
+            <div className="ghost" aria-hidden>
+              <span>
+                {prompt}
+                <i onMouseDown={(e) => e.preventDefault()} onClick={() => accept(prompt + rest)}>
+                  {rest}
+                </i>
+              </span>
+            </div>
+          )}
+          <div className={`suggest ${hintOn ? 'on' : ''}`} data-quiet="small" aria-hidden={!hintOn}>
+            <span className="suggest-label">{shown.current.label}</span>
+            <button type="button" tabIndex={-1} onMouseDown={(e) => e.preventDefault()} onClick={() => accept(shown.current.text)}>
+              {shown.current.text}
+            </button>
+            <kbd>tab</kbd>
           </div>
         </form>
 
