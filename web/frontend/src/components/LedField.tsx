@@ -3,36 +3,18 @@ import { useEffect, useRef } from 'react'
 // Full-screen "LED panel" background. Every cell is one RGB pixel.
 //
 // Kept deliberately calm:
-//   idle     rainbow backlight glowing out from behind the text box
-//   (steps)  after Enter the glow pulls in and fades out; the panel stays dark
-//            while the step labels animate on top
-//   finale   the spectrogram fades in and sits still; a thin playhead moves
-//            across it while the audio plays
+//   idle       rainbow backlight glowing out from behind the text box
+//   otherwise  the glow pulls in and fades out; the panel stays dark and still
 //
 // Text stays readable without boxes: any element with [data-quiet] switches
 // off the LEDs around it, with a dithered edge, following its live opacity.
 
-export type LedMode = 'idle' | 'inhale' | 'encode' | 'denoise' | 'decode' | 'vocode' | 'drop' | 'finale'
-
 export interface Scene {
-  mode: LedMode
-  modeAt: number // performance.now() when mode was set
-  mel: Uint8Array | null // 80 x 256, bin-major, 0..255
-  noise: number // 0..1 diffusion noise level
-  playhead: number | null // 0..1 while audio plays
-  level: number // audio loudness 0..1
-  focus: boolean // input focused (idle glow brightens)
+  glow: boolean // backlight on (idle) or off (everything else)
+  focus: boolean // input focused (backlight brightens)
 }
 
-export const newScene = (): Scene => ({ mode: 'idle', modeAt: 0, mel: null, noise: 0, playhead: null, level: 0, focus: false })
-export function setMode(s: Scene, mode: LedMode) {
-  if (s.mode === mode) return
-  s.mode = mode
-  s.modeAt = performance.now()
-}
-
-const BINS = 80
-const FRAMES = 256
+export const newScene = (): Scene => ({ glow: true, focus: false })
 
 const HUE = (() => {
   const lut = new Float32Array(360 * 3)
@@ -68,13 +50,8 @@ export function LedField({ scene }: { scene: React.MutableRefObject<Scene> }) {
     let img: ImageData
     let thresh = new Float32Array(0) // per-cell random threshold for the dithered switch-off
     let quiet = new Float32Array(0) // per-cell brightness multiplier from text zones
-    const shown = new Float32Array(BINS * FRAMES)
-    const energy = new Float32Array(FRAMES)
-    let master = 1
     let glow = 1 // 0..1, how much of the idle backlight is showing
     let focusAmt = 0
-    let lowBin = 0 // lowest mel bin that actually has sound (eased); the centre line starts here
-    const rowMean = new Float32Array(BINS)
 
     const resize = () => {
       dpr = Math.min(window.innerWidth < 700 ? 1.5 : 2, window.devicePixelRatio || 1)
@@ -159,39 +136,9 @@ export function LedField({ scene }: { scene: React.MutableRefObject<Scene> }) {
       }
       const s = scene.current
       const t = ((now - t0) / 1000) * (reduced ? 0.25 : 1)
-      const mode = s.mode
 
-      // --- mode targets ---
-      const showMel = mode === 'finale'
-      master += ((showMel ? 1 : 0) - master) * (showMel ? 0.035 : 0.08) // slow fade in, quick fade out
-      glow += ((mode === 'idle' ? 1 : 0) - glow) * (mode === 'idle' ? 0.03 : 0.07)
+      glow += ((s.glow ? 1 : 0) - glow) * (s.glow ? 0.03 : 0.07)
       focusAmt += ((s.focus ? 1 : 0) - focusAmt) * 0.06
-      if (s.mel && showMel) for (let i = 0; i < shown.length; i++) shown[i] += (s.mel[i] / 255 - shown[i]) * 0.2
-
-      // Skip empty low-frequency rows: the picture is mirrored around the centre
-      // line (lowest frequency in the middle), so silent low bins would show as a
-      // dark bar through the middle. Start at the first bin with real energy.
-      let rmax = 1e-6
-      for (let b = 0; b < BINS; b++) {
-        let m = 0
-        for (let f = 0; f < FRAMES; f++) m += shown[b * FRAMES + f]
-        rowMean[b] = m / FRAMES
-        rmax = Math.max(rmax, rowMean[b])
-      }
-      let lo = 0
-      while (lo < BINS / 2 && rowMean[lo] < rmax * 0.7) lo++
-      lowBin += (lo - lowBin) * 0.08
-      const lowB = Math.min(BINS - 1, Math.ceil(lowBin - 0.05))
-
-      let emax = 0.2
-      for (let f = 0; f < FRAMES; f++) {
-        let e = 0
-        for (let b = 0; b < BINS; b++) e += shown[b * FRAMES + f]
-        energy[f] = e / BINS
-        emax = Math.max(emax, energy[f])
-      }
-
-      const playing = s.playhead !== null
 
       buildQuiet()
 
@@ -209,29 +156,8 @@ export function LedField({ scene }: { scene: React.MutableRefObject<Scene> }) {
       const gGain = glow * breathe * (0.6 + 0.4 * focusAmt)
 
       const data = img.data
-      const mid = (rows - 1) / 2
-      const hMaxM = rows * 0.29
       for (let x = 0; x < cols; x++) {
-        const u = x / (cols - 1)
-        const f = Math.min(FRAMES - 1, Math.floor(u * FRAMES))
-        const h = hMaxM * (0.15 + 0.85 * (energy[f] / emax))
-        const hueBase = u * 290
-        const play = playing ? Math.max(0, 1 - Math.abs(u - s.playhead!) * cols * 0.8) : 0
-
         for (let y = 0; y < rows; y++) {
-          const d = Math.abs(y - mid)
-          let b = 0
-          let white = 0
-          if (master > 0.003 && d < h) {
-            const bin = Math.min(BINS - 1, lowB + Math.floor((d / hMaxM) * (BINS - lowB)))
-            b = Math.min(1, shown[bin * FRAMES + f] * 1.35) * master
-            if (play > 0) {
-              white = play * 0.35 * master
-              b += play * 0.3 * master
-            }
-          }
-
-          // idle backlight
           let g = 0
           let gh = 0
           if (gGain > 0.005) {
@@ -243,16 +169,12 @@ export function LedField({ scene }: { scene: React.MutableRefObject<Scene> }) {
             if (!reduced) g *= 0.85 + 0.15 * Math.sin(t * 2.6 + thresh[y * cols + x] * 40)
             gh = (Math.floor((Math.atan2(py - gcy, (px - gcx) * 0.45) * 180) / Math.PI + 360 + t * 22) % 360) * 3
           }
-          const q = quiet[y * cols + x]
-          b *= q
-          white *= q
-          g *= q
+          g *= quiet[y * cols + x]
 
-          const hue = (Math.floor(hueBase + d * 3.5) % 360) * 3
           const o = (y * cols + x) * 4
-          data[o] = 9 + HUE[hue] * b + HUE[gh] * g + 255 * white
-          data[o + 1] = 9 + HUE[hue + 1] * b + HUE[gh + 1] * g + 255 * white
-          data[o + 2] = 13 + HUE[hue + 2] * b + HUE[gh + 2] * g + 255 * white
+          data[o] = 9 + HUE[gh] * g
+          data[o + 1] = 9 + HUE[gh + 1] * g
+          data[o + 2] = 13 + HUE[gh + 2] * g
           data[o + 3] = 255
         }
       }

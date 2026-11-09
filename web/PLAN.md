@@ -18,11 +18,12 @@ Run it locally: see `README.md`.
 
 **Design (v2):** one full-screen page, very dark. Background is a canvas "LED panel"
 (`LedField.tsx`): every cell is one RGB pixel with bloom. Idle, it shows a rainbow
-backlight glowing in an oval around the typed text. After Enter it goes dark and stays still while the step labels animate. In the
-finale the result's spectrogram fades in, mirrored around the centre line (low frequencies
-in the middle), and a thin playhead moves across it while the audio plays. The only UI is a centred text input. On Enter it dissolves into a full-screen sequence
-(`Sequence.tsx`): each step rises in centre-stage with a small LED loader, then gives way to
-the next. A finale (`Finale.tsx`) fades the spectrogram in and shows the prompt, play, download and "make another". Text stays readable because the
+backlight glowing around the typed text; after Enter it goes dark and stays still. The only
+UI is a centred text input. On Enter it dissolves into a full-screen sequence
+(`Sequence.tsx`): each step rises in centre-stage above one thin loading bar that fills across
+the whole run. Each run makes four takes (four `/generate` calls, one after another, each with
+its own seed). The finale (`Finale.tsx`) shows the prompt and four mini players, each with
+play, a scrubber and its own download, plus "make another". Text stays readable because the
 LED panel switches off its own LEDs around any `[data-quiet]` element.
 
 **Suggestions (Krillion-style, never blocking):** free text up to 200 chars is allowed, since
@@ -43,7 +44,7 @@ on load to wake the server. In mock mode only the local layer runs.
  │ React app            │ ───────────────▶  │ FastAPI                       │
  │  centre input        │                   │  CLAP → DDIM+CFG → VAE → BigVGAN
  │  step text column    │ ◀─ SSE events ─── │  yields one event per step    │
- │  LED spectrogram bg  │                   └───────────────────────────────┘
+ │  4 mini players      │                   └───────────────────────────────┘
  └──────────────────────┘
 ```
 

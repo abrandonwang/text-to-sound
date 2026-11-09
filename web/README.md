@@ -39,8 +39,8 @@ frontend/src/
   api/sseClient.ts     EventSource client for a real server
   mock/synth.ts        fake mel, fake noise schedule, Griffin-Lim "vocoder"
   state.ts             reducer: events -> UI state
-  components/LedField  full-screen RGB LED canvas (wave -> spectrogram), one mode per step
+  components/LedField  full-screen RGB LED canvas: rainbow backlight when idle, dark otherwise
   components/Sequence  full-screen step-by-step animation after you press enter
-  components/Finale    the reveal: prompt as title, play / download / make another
+  components/Finale    the reveal: prompt as title, four mini players, make another
 mock-server/server.py  FastAPI version of the mock; template for the real server
 ```

@@ -11,6 +11,7 @@
   --in: cubic-bezier(0.7, 0, 0.84, 0);
   --move: cubic-bezier(0.65, 0, 0.35, 1);
   --P: clamp(88px, 13vh, 128px); /* row pitch of the step sequence */
+  --label: clamp(40px, 6.4vw, 92px); /* size of the step labels */
   color-scheme: dark;
 }
 
@@ -91,7 +92,7 @@ button, input { font: inherit; color: inherit; }
   transition: transform 560ms var(--move), opacity 360ms var(--in), filter 360ms var(--in);
 }
 .stage-label {
-  font-size: clamp(40px, 6.4vw, 92px); font-weight: 400; letter-spacing: -0.035em; line-height: 1;
+  font-size: var(--label); font-weight: 400; letter-spacing: -0.035em; line-height: 1;
   white-space: nowrap;
 }
 .stage.is-current {
@@ -105,17 +106,28 @@ button, input { font: inherit; color: inherit; }
 }
 .sequence:not(.on) .stage { transition-duration: 200ms; transition-delay: 0ms; }
 
-/* tiny LED loader: 12 squares */
-.loader { display: flex; gap: 3px; margin-top: 30px; transition: opacity 300ms; }
-.stage:not(.is-current) .loader { opacity: 0; }
-.loader i { width: 6px; height: 6px; border-radius: 1.5px; background: rgba(244, 244, 248, 0.14); transition: background 160ms; }
-.loader i.lit { background: var(--accent); }
-.loader.is-sweeping i { animation: sweep 900ms linear infinite; }
-@keyframes sweep { 0%, 9% { background: var(--accent); } 34%, 100% { background: rgba(244, 244, 248, 0.14); } }
+/* one thin loading bar under the labels, filling across the whole run */
+.bar {
+  position: absolute; left: 50%; top: calc(var(--label) / 2 + clamp(26px, 4vh, 38px));
+  width: min(340px, 64vw); height: 2px; transform: translateX(-50%); border-radius: 2px; overflow: hidden;
+  background: rgba(244, 244, 248, 0.12);
+  opacity: 0; transition: opacity 260ms var(--in);
+}
+.sequence.on .bar { opacity: 1; transition: opacity 420ms var(--out) 180ms; }
+.sequence.is-finished .bar { opacity: 0; transition: opacity 320ms var(--in) 80ms; }
+.bar i { display: block; height: 100%; background: var(--fg); transform: scaleX(0); transform-origin: left; }
+/* a soft light keeps moving along it, so it never looks stuck on a slow step */
+.bar::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 35%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: bar-light 1500ms var(--move) infinite;
+}
+@keyframes bar-light { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 
 /* reading prompt: the user's words, lit up letter by letter */
 .readout {
-  margin-top: 26px; max-width: min(60ch, 80vw); text-align: center;
+  position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 22px;
+  width: max-content; max-width: min(60ch, 80vw); text-align: center;
   font-family: var(--mono); font-size: 15px; letter-spacing: 0.02em; line-height: 1.6;
   color: rgba(244, 244, 248, 0.32); white-space: pre-wrap;
 }
@@ -126,28 +138,66 @@ button, input { font: inherit; color: inherit; }
 .stage:not(.is-current) .readout { opacity: 0; transition: opacity 300ms; }
 
 /* ---------- finale ---------- */
-.finale { position: absolute; inset: 0; pointer-events: none; }
-.finale.on { pointer-events: auto; }
-.title {
-  position: absolute; left: 50%; top: 13vh; transform: translateX(-50%);
-  width: min(960px, 88vw); margin: 0; text-align: center; text-wrap: balance;
-  font-size: clamp(34px, 5vw, 72px); font-weight: 300; letter-spacing: -0.03em; line-height: 1.05;
-  opacity: 0; transition: opacity 300ms var(--in);
+.finale {
+  position: absolute; inset: 0; padding: 24px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(26px, 5vh, 44px);
+  pointer-events: none; opacity: 0; transition: opacity 240ms var(--in);
 }
-.finale.on .title { opacity: 1; transition: opacity 200ms; }
-/* free-text prompts can be long: step the size down so they stay above the spectrogram */
-.title.is-long { font-size: clamp(26px, 3.4vw, 48px); }
-.title.is-longer { font-size: clamp(19px, 2.3vw, 32px); line-height: 1.15; }
+.finale.on { pointer-events: auto; opacity: 1; transition: opacity 200ms; }
+.title {
+  width: min(760px, 88vw); margin: 0; text-align: center; text-wrap: balance;
+  font-size: clamp(30px, 4vw, 56px); font-weight: 300; letter-spacing: -0.03em; line-height: 1.05;
+}
+/* free-text prompts can be long: step the size down so the players still fit */
+.title.is-long { font-size: clamp(24px, 2.8vw, 38px); line-height: 1.12; }
+.title.is-longer { font-size: clamp(18px, 1.9vw, 26px); line-height: 1.2; }
 .word { white-space: nowrap; }
 .ch { display: inline-block; animation: ch-in 700ms var(--out) both; }
 @keyframes ch-in { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } }
 
+/* mini players */
+.takes { list-style: none; margin: 0; padding: 0; width: min(480px, 88vw); display: flex; flex-direction: column; gap: 8px; }
+.take {
+  display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 10px;
+  border: 1px solid rgba(244, 244, 248, 0.08); border-radius: 14px; background: #0b0b0f;
+  transition: border-color 200ms;
+}
+.finale.on .take { animation: rise 560ms var(--out) both; animation-delay: calc(260ms + var(--i) * 70ms); }
+.finale.on .controls { animation: rise 560ms var(--out) 620ms both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+.take:hover { border-color: rgba(244, 244, 248, 0.16); }
+.take.is-playing { border-color: rgba(244, 244, 248, 0.26); }
+
+.take-play {
+  flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 50%; cursor: pointer; color: var(--fg); background: rgba(244, 244, 248, 0.1);
+  transition: background 160ms, color 160ms;
+}
+.take-play svg { width: 10px; height: 12px; fill: currentColor; }
+.take-play svg path[d^='M0 0l'] { transform: translateX(1px); } /* the play triangle looks centred when nudged */
+.take-play:hover { background: rgba(244, 244, 248, 0.18); }
+.take.is-playing .take-play { background: var(--fg); color: var(--bg); }
+
+.take-track { flex: 1; min-width: 0; height: 28px; margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.take-track::-webkit-slider-runnable-track { height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--fg) var(--p), rgba(244, 244, 248, 0.16) var(--p)); }
+.take-track::-moz-range-track { height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--fg) var(--p), rgba(244, 244, 248, 0.16) var(--p)); }
+.take-track::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; margin-top: -4px; border-radius: 50%; background: var(--fg); opacity: 0; transition: opacity 150ms; }
+.take-track::-moz-range-thumb { width: 10px; height: 10px; border: 0; border-radius: 50%; background: var(--fg); opacity: 0; transition: opacity 150ms; }
+.take:hover .take-track::-webkit-slider-thumb, .take.is-playing .take-track::-webkit-slider-thumb { opacity: 1; }
+.take:hover .take-track::-moz-range-thumb, .take.is-playing .take-track::-moz-range-thumb { opacity: 1; }
+
+.take-time { flex: none; font-size: 13px; font-variant-numeric: tabular-nums; color: rgba(244, 244, 248, 0.5); }
+.take-save { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: var(--ctl); transition: color 160ms, background 160ms; }
+.take-save svg { width: 11px; height: 13px; fill: currentColor; }
+.take-save:hover { color: var(--fg); background: rgba(244, 244, 248, 0.08); }
+.take-save.is-saved { color: #3dff8b; }
+.take-save.is-saved svg { fill: none; width: 13px; }
+
 .controls {
   position: absolute; left: 50%; bottom: calc(13vh + env(safe-area-inset-bottom)); transform: translate(-50%, 8px);
   display: flex; gap: 32px; white-space: nowrap;
-  opacity: 0; transition: opacity 300ms var(--in), transform 300ms var(--in);
 }
-.finale.on .controls { opacity: 1; transform: translate(-50%, 0); transition: opacity 600ms var(--out) 900ms, transform 600ms var(--out) 900ms; }
+.finale .controls { position: static; transform: none; }
 .controls button, .controls a {
   display: inline-flex; align-items: center; gap: 10px; padding: 10px 2px;
   background: none; border: 0; cursor: pointer; text-decoration: none;
@@ -158,7 +208,6 @@ button, input { font: inherit; color: inherit; }
 .controls span { background: var(--rainbow) no-repeat left bottom / 0% 1px; padding-bottom: 3px; transition: background-size 240ms var(--out); }
 .controls button:hover, .controls a:hover, .controls :focus-visible { color: var(--fg); }
 .controls button:hover span, .controls a:hover span, .controls :focus-visible span { background-size: 100% 1px; }
-.controls a.is-saved { color: #3dff8b; }
 
 /* ---------- error ---------- */
 .error { position: absolute; inset: 0; }
@@ -167,7 +216,7 @@ button, input { font: inherit; color: inherit; }
   font-size: clamp(34px, 5vw, 64px); font-weight: 400; letter-spacing: -0.03em;
   animation: ch-in 640ms var(--out) both;
 }
-.error .controls { opacity: 1; bottom: auto; top: calc(46% + clamp(40px, 6vw, 72px)); transform: translate(-50%, 0); }
+.error .controls { bottom: auto; top: calc(46% + clamp(40px, 6vw, 72px)); transform: translate(-50%, 0); }
 
 /* ---------- signature ---------- */
 .sig {
@@ -180,11 +229,9 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------- small screens ---------- */
 @media (max-width: 700px) {
-  :root { --P: 12vh; }
+  :root { --P: 12vh; --label: clamp(34px, 9vw, 64px); }
   .prompt { top: 34%; }
   .sequence { top: 42%; }
-  .stage-label { font-size: clamp(34px, 9vw, 64px); }
-  .title { top: 11vh; }
   .controls { gap: 22px; }
   .controls button, .controls a { padding: 14px 2px; }
   .suggest button { padding: 10px 0; }
@@ -194,7 +241,7 @@ button, input { font: inherit; color: inherit; }
 /* ---------- reduced motion: crossfades only ---------- */
 @media (prefers-reduced-motion: reduce) {
   .stage, .stage.is-current { transform: translate(-50%, -50%) !important; filter: none !important; transition: opacity 200ms linear !important; }
-  .loader.is-sweeping i, .readout.is-reading i { animation: none; }
-  .ch, .error-label { animation: none; }
+  .bar::after, .readout.is-reading i { animation: none; }
+  .ch, .error-label, .finale.on .take, .finale.on .controls { animation: none; }
   .prompt, .stage-root:not(.view-idle) .prompt { filter: none; transition: opacity 200ms linear; }
 }
