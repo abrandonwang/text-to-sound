@@ -19,21 +19,23 @@ Run it locally: see `README.md`.
 **Design (v2):** one full-screen page, very dark. Background is a canvas "LED panel"
 (`LedField.tsx`): every cell is one RGB pixel with bloom. Idle, it shows a rainbow
 backlight glowing around the typed text; after Enter it goes dark and stays still. The only
-UI is a centred text input. On Enter it dissolves into a full-screen sequence
-(`Sequence.tsx`): each step rises in centre-stage above one thin loading bar that fills across
-the whole run. Each run makes four takes (four `/generate` calls, one after another, each with
-its own seed). The finale (`Finale.tsx`) shows the prompt and four mini players, each with
+UI is a centred text input. On Enter it dissolves into a full-screen loading screen
+(`Sequence.tsx`) driven only by server events. Each run makes four takes (four `/generate`
+calls, one after another, each with its own seed), so the big label is "sound 1 of 4" and so on,
+with "waking up the model" or "waiting in line" before it when that is really happening. One
+thin bar fills across the whole run, and a small line under it says what the model is doing
+("removing noise 23 / 50", then "turning it into audio"). The finale (`Finale.tsx`) shows the prompt and four mini players, each with
 play, a scrubber and its own download, plus "make another". Text stays readable because the
 LED panel switches off its own LEDs around any `[data-quiet]` element.
 
-**Suggestions (Krillion-style, never blocking):** free text up to 200 chars is allowed, since
-the model is conditioned on CLAP text embeddings and trained on full captions. Under the
-input, a quiet line offers the closest known-good prompts in three layers: exact/alias and
-typo fixes from the FSD50K names in `src/vocab/` (instant, local, 1-2 word prompts only),
-then matching by meaning from the server's `GET /suggest` (debounced 300 ms; top match
-must be >= 0.66 CLAP cosine, others >= 0.6 and within 0.1 of it, because junk input lands
-on a few "hub" prompts at ~0.6). Click a chip to generate it with its best seed; Tab fills
-in the top one; Enter always generates exactly what was typed. The page calls `/health`
+**Prompt help (never blocking):** free text up to 200 chars is allowed, since the model is
+conditioned on CLAP text embeddings and trained on full captions. At most one thing shows at
+a time. While a sound name is half typed, the rest appears dimmed in the input. Otherwise,
+500 ms after typing stops, one suggestion appears under it: a typo fix or different word from
+the FSD50K names in `src/vocab/` (local, 1-2 word prompts only), or else the closest match by
+meaning from the server's `GET /suggest` (up to 3 words; must be >= 0.66 CLAP cosine, because
+junk input lands on a few "hub" prompts at ~0.6). Tab or a click fills it in, and nothing
+generates until Enter, which always uses exactly what is in the box. The page calls `/health`
 on load to wake the server. In mock mode only the local layer runs.
 
 ## 2. Architecture

@@ -39,9 +39,16 @@ button, input { font: inherit; color: inherit; }
 }
 .prompt input {
   display: block; width: 100%; background: transparent; border: 0; outline: 0;
-  text-align: center; font-size: clamp(28px, 3.4vw, 46px); font-weight: 400; letter-spacing: -0.02em;
+  text-align: center; font-size: var(--fit, clamp(28px, 3.4vw, 46px)); font-weight: 400; letter-spacing: -0.02em;
   padding: 10px 0 16px; caret-color: transparent; font-variant-ligatures: none;
 }
+/* the rest of a half-typed sound name, hanging off the typed text so that stays centred */
+.ghost {
+  position: absolute; left: 0; right: 0; top: 0; padding: 10px 0 16px; text-align: center; white-space: pre; pointer-events: none;
+  font-size: var(--fit, clamp(28px, 3.4vw, 46px)); font-weight: 400; letter-spacing: -0.02em; font-variant-ligatures: none;
+}
+.ghost span { position: relative; color: transparent; }
+.ghost i { position: absolute; left: 100%; top: 0; font-style: normal; color: var(--dim); cursor: pointer; pointer-events: auto; }
 .prompt input::selection { background: transparent; color: inherit; } /* no highlight */
 .prompt input::placeholder { color: var(--dim); transition: color 0.2s; }
 .prompt input:focus::placeholder { color: rgba(244, 244, 248, 0.22); }
@@ -58,21 +65,25 @@ button, input { font: inherit; color: inherit; }
 .stage-root:not(.view-idle) .prompt::before,
 .stage-root:not(.view-idle) .prompt::after { transform: scaleX(0); transition: transform 260ms var(--in); }
 
-/* suggestions: one quiet line under the input, "closest sounds  dog · a dog barking" */
+/* one quiet suggestion under the input: "did you mean  rain  [tab]" */
 .suggest {
   position: absolute; left: 50%; top: 100%; width: max-content; max-width: min(680px, 86vw);
   transform: translate(-50%, -4px); margin-top: 14px;
-  display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 2px 10px;
-  font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em;
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 15px;
   opacity: 0; pointer-events: none;
-  transition: opacity 220ms var(--in), transform 220ms var(--in);
+  transition: opacity 120ms linear, transform 120ms linear;
 }
 .suggest.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; transition: opacity 320ms var(--out), transform 320ms var(--out); }
-.suggest-label, .suggest-dot { color: var(--dim); }
-.suggest-label { margin-right: 4px; }
+.suggest-label { color: var(--dim); }
+.suggest kbd {
+  font: inherit; font-size: 11px; line-height: 1; padding: 3px 6px; margin-left: 2px; border-radius: 5px;
+  color: var(--dim); border: 1px solid rgba(244, 244, 248, 0.14);
+}
+@media (hover: none) { .suggest kbd { display: none; } } /* no tab key on a phone: tap it */
 .suggest button {
   background: none; border: 0; padding: 6px 0; cursor: pointer; white-space: nowrap;
-  font: inherit; letter-spacing: inherit; color: rgba(244, 244, 248, 0.82);
+  font: inherit; color: var(--fg);
   background-image: var(--rainbow); background-repeat: no-repeat; background-position: left 85%; background-size: 0% 1px;
   transition: color 200ms, background-size 240ms var(--out);
 }
@@ -83,28 +94,22 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------- step sequence ---------- */
 .sequence { position: absolute; left: 0; right: 0; top: 46%; height: 0; pointer-events: none; }
-.stage {
-  --y: calc(var(--P) * 0.6); --sc: 0.92;
-  position: absolute; left: 50%; top: 0;
-  display: flex; flex-direction: column; align-items: center;
-  transform: translate(-50%, calc(-50% + var(--y))) scale(var(--sc));
-  opacity: 0; filter: blur(8px);
-  transition: transform 560ms var(--move), opacity 360ms var(--in), filter 360ms var(--in);
-}
+.stage { position: absolute; left: 50%; top: 0; transform: translate(-50%, -50%); }
 .stage-label {
   font-size: var(--label); font-weight: 400; letter-spacing: -0.035em; line-height: 1;
   white-space: nowrap;
 }
-.stage.is-current {
-  --y: 0px; --sc: 1; opacity: 1; filter: blur(0);
-  transition: transform 640ms var(--out) 140ms, opacity 640ms var(--out) 140ms, filter 640ms var(--out) 140ms;
+.stage.is-current { animation: stage-in 640ms var(--out) 120ms both; }
+/* a finished step flies up and disappears completely */
+.stage.is-gone { animation: stage-out 520ms var(--move) both; }
+@keyframes stage-in {
+  from { opacity: 0; filter: blur(8px); transform: translate(-50%, calc(-50% + var(--P) * 0.6)) scale(0.92); }
+  to { opacity: 1; filter: blur(0); transform: translate(-50%, -50%); }
 }
-/* finished steps fly up and disappear completely */
-.stage.is-gone {
-  --y: calc(var(--P) * -0.9); --sc: 0.96; opacity: 0; filter: blur(8px);
-  transition: transform 560ms var(--move), opacity 420ms var(--in), filter 420ms var(--in);
+@keyframes stage-out {
+  from { opacity: 1; filter: blur(0); transform: translate(-50%, -50%); }
+  to { opacity: 0; filter: blur(8px); transform: translate(-50%, calc(-50% - var(--P) * 0.9)) scale(0.96); }
 }
-.sequence:not(.on) .stage { transition-duration: 200ms; transition-delay: 0ms; }
 
 /* one thin loading bar under the labels, filling across the whole run */
 .bar {
@@ -124,18 +129,21 @@ button, input { font: inherit; color: inherit; }
 }
 @keyframes bar-light { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 
-/* reading prompt: the user's words, lit up letter by letter */
-.readout {
-  position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 22px;
-  width: max-content; max-width: min(60ch, 80vw); text-align: center;
-  font-family: var(--mono); font-size: 15px; letter-spacing: 0.02em; line-height: 1.6;
-  color: rgba(244, 244, 248, 0.32); white-space: pre-wrap;
+/* what the model is doing right now */
+.detail {
+  position: absolute; left: 50%; top: calc(var(--label) / 2 + clamp(26px, 4vh, 38px) + 16px); transform: translateX(-50%); margin: 0;
+  font-size: 14px; font-variant-numeric: tabular-nums; white-space: pre; color: rgba(244, 244, 248, 0.5);
+  opacity: 0; transition: opacity 260ms var(--in);
 }
-.readout i { font-style: normal; }
-.readout.is-reading i { animation: read 1100ms linear infinite; }
-.readout.is-read i { color: var(--fg); transition: color 200ms; }
-@keyframes read { 0% { color: #fff; } 6% { color: #ff2bd6; } 22%, 100% { color: rgba(244, 244, 248, 0.32); } }
-.stage:not(.is-current) .readout { opacity: 0; transition: opacity 300ms; }
+/* the prompt being made, above the label */
+.readout {
+  position: absolute; left: 50%; bottom: calc(var(--label) / 2 + 24px); transform: translateX(-50%); margin: 0;
+  width: max-content; max-width: min(60ch, 80vw); text-align: center;
+  font-size: 16px; line-height: 1.5; color: rgba(244, 244, 248, 0.5);
+  opacity: 0; transition: opacity 260ms var(--in);
+}
+.sequence.on .detail, .sequence.on .readout { opacity: 1; transition: opacity 420ms var(--out) 180ms; }
+.sequence.is-finished .detail, .sequence.is-finished .readout { opacity: 0; transition: opacity 320ms var(--in) 80ms; }
 
 /* ---------- finale ---------- */
 .finale {
@@ -240,8 +248,9 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------- reduced motion: crossfades only ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .stage, .stage.is-current { transform: translate(-50%, -50%) !important; filter: none !important; transition: opacity 200ms linear !important; }
-  .bar::after, .readout.is-reading i { animation: none; }
+  .stage.is-current { animation: none; }
+  .stage.is-gone { animation: none; opacity: 0; }
+  .bar::after { animation: none; }
   .ch, .error-label, .finale.on .take, .finale.on .controls { animation: none; }
   .prompt, .stage-root:not(.view-idle) .prompt { filter: none; transition: opacity 200ms linear; }
 }
