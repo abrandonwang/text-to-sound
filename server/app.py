@@ -25,7 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from transformers import ClapModel, ClapProcessor
 
-from model import SCALE, T, Autoencoder, UNet
+from model import T, Autoencoder, UNet, UNet4, make_betas
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEIGHTS = os.environ.get("WEIGHTS_DIR", HERE)  # unet, vae, mel_stats live here
@@ -49,10 +49,17 @@ torch.set_num_threads(os.cpu_count() or 2)
 torch.set_grad_enabled(False)
 
 # ---------- load everything once ----------
-betas = torch.linspace(0.0001, 0.02, T, device = DEVICE)
+# Which U-Net, latent scale and noise schedule. A <unet file stem>_config.json next to the weights
+# (written by the training notebook) overrides these v3 defaults.
+CFG = {"arch": "v3", "scale": 0.6863, "schedule": "linear", "beta_start": 0.0001, "beta_end": 0.02}
+_cfg_path = os.path.join(WEIGHTS, os.path.splitext(UNET_FILE)[0] + "_config.json")
+if os.path.exists(_cfg_path):
+    CFG.update(json.load(open(_cfg_path)))
+SCALE = CFG["scale"]
+betas = make_betas(CFG["schedule"], CFG["beta_start"], CFG["beta_end"]).to(DEVICE)
 alpha_bar = torch.cumprod(1 - betas, dim = 0)
 
-unet = UNet()
+unet = UNet4() if CFG["arch"] == "v4" else UNet()
 unet.load_state_dict(torch.load(os.path.join(WEIGHTS, UNET_FILE), map_location = "cpu"))
 unet = unet.eval().to(DEVICE)
 
@@ -200,7 +207,7 @@ def run(prompt, guidance, steps, seed):
 @app.get("/")
 @app.get("/health")
 def health():
-    return {"ok": True, "mock": False, "unet": UNET_FILE, "device": DEVICE}
+    return {"ok": True, "mock": False, "unet": UNET_FILE, "arch": CFG["arch"], "device": DEVICE}
 
 
 @app.get("/suggest")
