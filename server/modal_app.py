@@ -2,9 +2,11 @@
 
 One-time:
     modal volume create tts-weights
-    modal volume put tts-weights unet_fsd_ema.pt /
+    modal volume put tts-weights unet_v4_ema.pt /
+    modal volume put tts-weights unet_v4_ema_config.json /
     modal volume put tts-weights vae_gan2.pt /
     modal volume put tts-weights mel_stats.npy /
+    modal volume put tts-weights clap_audio_bank.npy /      (optional, from make_bank.py)
 Deploy (from this folder):
     modal deploy modal_app.py
 """

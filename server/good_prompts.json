@@ -1,797 +1,995 @@
 {
- "note": "placeholder list; replace with CLAP-scored prompts after unet_fsd2",
+ "note": "seed and clap from score_prompts.py: unet_v4_ema.pt, cfg 3.0, 50 steps, best of 4",
  "prompts": [
   {
    "prompt": "a dog barking",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.535
   },
   {
    "prompt": "rain falling",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.351
   },
   {
    "prompt": "birds singing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.328
   },
   {
    "prompt": "people talking",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.228
   },
   {
    "prompt": "thunder and heavy rain",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.477
   },
   {
    "prompt": "footsteps on gravel",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.501
   },
   {
    "prompt": "a car engine starting",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.241
   },
   {
    "prompt": "waves crashing on the shore",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.361
   },
   {
    "prompt": "a door slamming",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.472
   },
   {
    "prompt": "glass breaking",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.696
   },
   {
    "prompt": "a crowd cheering",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.559
   },
   {
    "prompt": "wind blowing through trees",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.287
   },
   {
    "prompt": "a phone ringing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.461
   },
   {
    "prompt": "a cat meowing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.451
   },
   {
    "prompt": "engine revving",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.626
   },
   {
    "prompt": "accordion",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.388
   },
   {
    "prompt": "acoustic guitar",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.475
   },
   {
    "prompt": "aircraft",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.447
   },
   {
    "prompt": "alarm",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.452
   },
   {
    "prompt": "applause",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.594
   },
   {
    "prompt": "bark",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.642
   },
   {
    "prompt": "bass drum",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.245
   },
   {
    "prompt": "bass guitar",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.148
   },
   {
    "prompt": "bathtub",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.247
   },
   {
    "prompt": "bell",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.669
   },
   {
    "prompt": "bicycle",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.368
   },
   {
    "prompt": "bicycle bell",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.508
   },
   {
    "prompt": "bird",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.574
   },
   {
    "prompt": "boat",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.47
   },
   {
    "prompt": "boiling",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.729
   },
   {
    "prompt": "boom",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.59
   },
   {
    "prompt": "violin",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.615
   },
   {
    "prompt": "brass",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.456
   },
   {
    "prompt": "breathing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.513
   },
   {
    "prompt": "burp",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.531
   },
   {
    "prompt": "bus",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.506
   },
   {
    "prompt": "buzz",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.598
   },
   {
    "prompt": "camera",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.28
   },
   {
    "prompt": "car",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.307
   },
   {
    "prompt": "car passing by",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.35
   },
   {
    "prompt": "cat",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.427
   },
   {
    "prompt": "chatter",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.266
   },
   {
    "prompt": "cheering",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.501
   },
   {
    "prompt": "chewing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.496
   },
   {
    "prompt": "chicken",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.383
   },
   {
    "prompt": "child speaking",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.315
   },
   {
    "prompt": "chime",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.358
   },
   {
    "prompt": "clink",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.511
   },
   {
    "prompt": "tweet",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.362
   },
   {
    "prompt": "chuckle",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.449
   },
   {
    "prompt": "church bell",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.552
   },
   {
    "prompt": "clapping",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.575
   },
   {
    "prompt": "clock",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.549
   },
   {
    "prompt": "coin",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.592
   },
   {
    "prompt": "keyboard typing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.534
   },
   {
    "prompt": "conversation",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.159
   },
   {
    "prompt": "cough",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.586
   },
   {
    "prompt": "cowbell",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.532
   },
   {
    "prompt": "crack",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.593
   },
   {
    "prompt": "crackle",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.72
   },
   {
    "prompt": "crash cymbal",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.177
   },
   {
    "prompt": "cricket",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.447
   },
   {
    "prompt": "crow",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.558
   },
   {
    "prompt": "crowd",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.373
   },
   {
    "prompt": "crumpling",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.38
   },
   {
    "prompt": "crushing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.585
   },
   {
    "prompt": "crying",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.426
   },
   {
    "prompt": "cupboard",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.585
   },
   {
    "prompt": "cutlery",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.49
   },
   {
    "prompt": "cymbal",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.366
   },
   {
    "prompt": "dishes",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.447
   },
   {
    "prompt": "dog",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.358
   },
   {
    "prompt": "door",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.575
   },
   {
    "prompt": "doorbell",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.41
   },
   {
    "prompt": "drawer",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.105
   },
   {
    "prompt": "drill",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.38
   },
   {
    "prompt": "drip",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.585
   },
   {
    "prompt": "drum",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.486
   },
   {
    "prompt": "drum kit",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.078
   },
   {
    "prompt": "electric guitar",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.53
   },
   {
    "prompt": "engine",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.558
   },
   {
    "prompt": "engine starting",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.428
   },
   {
    "prompt": "explosion",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.69
   },
   {
    "prompt": "fart",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.578
   },
   {
    "prompt": "female singing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.468
   },
   {
    "prompt": "woman speaking",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.192
   },
   {
    "prompt": "fill",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.34
   },
   {
    "prompt": "finger snapping",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.573
   },
   {
    "prompt": "fire",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.621
   },
   {
    "prompt": "fireworks",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.548
   },
   {
    "prompt": "frog",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.742
   },
   {
    "prompt": "frying",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.643
   },
   {
    "prompt": "gasp",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.566
   },
   {
    "prompt": "giggle",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.52
   },
   {
    "prompt": "glass",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.524
   },
   {
    "prompt": "glockenspiel",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.536
   },
   {
    "prompt": "gong",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.543
   },
   {
    "prompt": "growl",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.581
   },
   {
    "prompt": "guitar",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.596
   },
   {
    "prompt": "seagull",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.689
   },
   {
    "prompt": "gunshot",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.602
   },
   {
    "prompt": "gurgling",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.648
   },
   {
    "prompt": "hammer",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.63
   },
   {
    "prompt": "hands",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.345
   },
   {
    "prompt": "harmonica",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.6
   },
   {
    "prompt": "harp",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.461
   },
   {
    "prompt": "hi-hat",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.289
   },
   {
    "prompt": "hiss",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.534
   },
   {
    "prompt": "human voice",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.223
   },
   {
    "prompt": "idling",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.376
   },
   {
    "prompt": "insect",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.564
   },
   {
    "prompt": "synth",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.394
   },
   {
    "prompt": "keys jangling",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.586
   },
   {
    "prompt": "knock",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.58
   },
   {
    "prompt": "laughter",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.591
   },
   {
    "prompt": "liquid",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.66
   },
   {
    "prompt": "male singing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.278
   },
   {
    "prompt": "man speaking",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.169
   },
   {
    "prompt": "mallet",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.517
   },
   {
    "prompt": "xylophone",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.447
   },
   {
    "prompt": "fan",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.557
   },
   {
    "prompt": "meow",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.637
   },
   {
    "prompt": "microwave",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.515
   },
   {
    "prompt": "motorcycle",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.533
   },
   {
    "prompt": "music",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.553
   },
   {
    "prompt": "ocean",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.326
   },
   {
    "prompt": "organ",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.647
   },
   {
    "prompt": "tape",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.414
   },
   {
    "prompt": "percussion",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.359
   },
   {
    "prompt": "piano",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.497
   },
   {
    "prompt": "pluck",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.346
   },
   {
    "prompt": "pour",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.449
   },
   {
    "prompt": "power tool",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.702
   },
   {
    "prompt": "printer",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.593
   },
   {
    "prompt": "purr",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.637
   },
   {
    "prompt": "race car",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.321
   },
   {
    "prompt": "train",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.392
   },
   {
    "prompt": "rain",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.519
   },
   {
    "prompt": "raindrop",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.471
   },
   {
    "prompt": "ratchet",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.542
   },
   {
    "prompt": "rattle",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.544
   },
   {
    "prompt": "ringtone",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.574
   },
   {
    "prompt": "run",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.386
   },
   {
    "prompt": "sawing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.324
   },
   {
    "prompt": "scissors",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.51
   },
   {
    "prompt": "scratching",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.423
   },
   {
    "prompt": "screaming",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.652
   },
   {
    "prompt": "screech",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.628
   },
   {
    "prompt": "shatter",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.605
   },
   {
    "prompt": "shout",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.559
   },
   {
    "prompt": "sigh",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.728
   },
   {
    "prompt": "singing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.569
   },
   {
    "prompt": "sink",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.624
   },
   {
    "prompt": "siren",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.619
   },
   {
    "prompt": "skateboard",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.525
   },
   {
    "prompt": "slam",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.538
   },
   {
    "prompt": "sliding door",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.445
   },
   {
    "prompt": "snare drum",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.005
   },
   {
    "prompt": "sneeze",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.709
   },
   {
    "prompt": "speech",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.327
   },
   {
    "prompt": "robot voice",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.508
   },
   {
    "prompt": "splash",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.601
   },
   {
    "prompt": "squeak",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.556
   },
   {
    "prompt": "stream",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.452
   },
   {
    "prompt": "strum",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.508
   },
   {
    "prompt": "subway",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.502
   },
   {
    "prompt": "tabla",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.484
   },
   {
    "prompt": "tambourine",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.549
   },
   {
    "prompt": "tap",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.348
   },
   {
    "prompt": "tearing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.515
   },
   {
    "prompt": "telephone",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.455
   },
   {
    "prompt": "thud",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.518
   },
   {
    "prompt": "thunder",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.605
   },
   {
    "prompt": "thunderstorm",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.548
   },
   {
    "prompt": "tick",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.502
   },
   {
    "prompt": "tick-tock",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.616
   },
   {
    "prompt": "toilet flush",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.641
   },
   {
    "prompt": "tools",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.535
   },
   {
    "prompt": "traffic",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.218
   },
   {
    "prompt": "trickle",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.54
   },
   {
    "prompt": "truck",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.493
   },
   {
    "prompt": "trumpet",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.493
   },
   {
    "prompt": "typewriter",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.509
   },
   {
    "prompt": "typing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.505
   },
   {
    "prompt": "car horn",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.485
   },
   {
    "prompt": "footsteps",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.449
   },
   {
    "prompt": "water",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.517
   },
   {
    "prompt": "faucet",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.55
   },
   {
    "prompt": "waves",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.422
   },
   {
    "prompt": "whisper",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.561
   },
   {
    "prompt": "whoosh",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.446
   },
   {
    "prompt": "wind",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.518
   },
   {
    "prompt": "wind chime",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.47
   },
   {
    "prompt": "flute",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.78
   },
   {
    "prompt": "wood",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.67
   },
   {
    "prompt": "writing",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.455
   },
   {
    "prompt": "yell",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.547
   },
   {
    "prompt": "zipper",
-   "seed": 0
+   "seed": 0,
+   "clap": 0.567
   }
  ]
 }
