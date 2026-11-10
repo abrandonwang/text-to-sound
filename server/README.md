@@ -43,9 +43,11 @@ python app.py              # CPU; DEVICE=mps python app.py uses a Mac GPU
 
 - `python make_bank.py <data folder>` writes `clap_audio_bank.npy`, the CLAP audio embeddings of the
   training clips. With it the server conditions on the prompt blended with its 8 nearest clips, which
-  closes most of CLAP's text-audio gap (+0.05 CLAP score with a Clotho-only bank). Run it on the Drive
+  closes most of CLAP's text-audio gap (mean CLAP score 0.328 → 0.387 in a paired 20-prompt × 3-seed
+  test, Clotho-only bank). The deployed bank is Clotho-only (22,848 clips); run the script on the Drive
   data folder to include FSD50K. Without the file the server uses the text embedding alone.
 - `python eval.py` prints the mean CLAP text-audio score over a fixed prompt set: the number
-  to compare two checkpoints or two sampler settings with.
+  to compare two checkpoints or two sampler settings with. Current: `unet_v4_ema.pt` with the bank,
+  cfg 3, 50 steps, 4 takes → mean 0.415, best 0.474.
 - `python score_prompts.py` rescores `good_prompts.json`: the best seed and CLAP score for every
   prompt `/suggest` can offer. Rerun it after changing the U-Net.

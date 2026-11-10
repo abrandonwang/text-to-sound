@@ -1,18 +1,21 @@
 # Showcase site plan
 
 A public page where anyone types a sound and watches the model make it, step by step.
-Built against a mock backend so it can be finished before the model is.
+It was built against a mock backend first; it now runs on the real model.
 
-## 1. What's built so far
+Live: https://abrandonwang.github.io/text-to-sound/
+
+## 1. What's built
 
 | Part | Where | Status |
 |---|---|---|
-| Frontend (React + Vite + TS) | `frontend/` | Done against mocks |
-| In-browser mock backend | `frontend/src/api/mockClient.ts`, `frontend/src/mock/synth.ts` | Done. Default when no server is set |
-| Python mock server (FastAPI, SSE) | `mock-server/server.py` | Done. Same events, proves the SSE path |
-| Real model server | — | After Phase 6 |
-| Precomputed gallery | — | Dropped from the page in the redesign; see §6 |
-| GitHub Pages deploy | — | Workflow below, not added yet |
+| Frontend (React + Vite + TS) | `frontend/` | Done, live on GitHub Pages |
+| In-browser mock backend | `frontend/src/api/mockClient.ts`, `frontend/src/mock/synth.ts` | Done. Used when `VITE_API_URL` is unset |
+| Python mock server (FastAPI, SSE) | `mock-server/server.py` | Done. Same events, for testing the SSE path offline |
+| Real model server | `../server/app.py`, deployed with `../server/modal_app.py` | Done, live on Modal (T4) |
+| GitHub Pages deploy | `../.github/workflows/pages.yml` | Done. Builds on pushes to `web/frontend/**` with `VITE_API_URL` from the `API_URL` repo variable |
+| Precomputed gallery | — | Dropped in the redesign; see §6 |
+| Credits / "AI-generated" note | — | Not done; see §8 |
 
 Run it locally: see `README.md`.
 
@@ -20,12 +23,13 @@ Run it locally: see `README.md`.
 (`LedField.tsx`): every cell is one RGB pixel with bloom. Idle, it shows a rainbow
 backlight glowing around the typed text; after Enter it goes dark and stays still. The only
 UI is a centred text input. On Enter it dissolves into a full-screen loading screen
-(`Sequence.tsx`) driven only by server events. Each run makes four takes (four `/generate`
-calls, one after another, each with its own seed), so the big label is "sound 1 of 4" and so on,
-with "waking up the model" or "waiting in line" before it when that is really happening. One
-thin bar fills across the whole run, and a small line under it says what the model is doing
-("removing noise 23 / 50", then "turning it into audio"). The finale (`Finale.tsx`) shows the prompt and four mini players, each with
-play, a scrubber and its own download, plus "make another". Text stays readable because the
+(`Sequence.tsx`) driven only by server events. Each run makes four sounds (four `/generate`
+calls, one after another, each with its own seed; the server makes 4 takes per call and keeps the
+best by CLAP), so the big label is "sound 1 of 4" and so on, with "waking up the model" or
+"waiting in line" before it when that is really happening. One thin bar fills across the whole
+run, and a small line under it says what the model is doing ("removing noise 23 / 50", then
+"turning it into audio"). The finale (`Finale.tsx`) shows the prompt and four mini players, each
+with play, a scrubber and its own download, plus "make another". Text stays readable because the
 LED panel switches off its own LEDs around any `[data-quiet]` element.
 
 **Prompt help (never blocking):** free text up to 200 chars is allowed, since the model is
@@ -35,25 +39,29 @@ a time. While a sound name is half typed, the rest appears dimmed in the input. 
 the FSD50K names in `src/vocab/` (local, 1-2 word prompts only), or else the closest match by
 meaning from the server's `GET /suggest` (up to 3 words; must be >= 0.66 CLAP cosine, because
 junk input lands on a few "hub" prompts at ~0.6). Tab or a click fills it in, and nothing
-generates until Enter, which always uses exactly what is in the box. The page calls `/health`
-on load to wake the server. In mock mode only the local layer runs.
+generates until Enter, which always uses exactly what is in the box. When the prompt is one of
+the server's known-good prompts, the first of the four sounds uses that prompt's best seed. The
+page calls `/health` on load to wake the server. In mock mode only the local layer runs.
 
 ## 2. Architecture
 
 ```
- GitHub Pages (static)                      Model server (Python, CPU or GPU)
- ┌──────────────────────┐   GET /generate   ┌───────────────────────────────┐
- │ React app            │ ───────────────▶  │ FastAPI                       │
- │  centre input        │                   │  CLAP → DDIM+CFG → VAE → BigVGAN
- │  step text column    │ ◀─ SSE events ─── │  yields one event per step    │
- │  4 mini players      │                   └───────────────────────────────┘
- └──────────────────────┘
+ GitHub Pages (static)                      Modal, T4 GPU, scales to zero
+ ┌──────────────────────┐   GET /generate   ┌──────────────────────────────────────┐
+ │ React app            │ ───────────────▶  │ FastAPI (server/app.py)              │
+ │  centre input        │   GET /suggest    │  CLAP → retrieval blend → DDIM + CFG │
+ │  loading sequence    │   GET /health     │  → VAE → BigVGAN → best of 4 by CLAP │
+ │  4 mini players      │ ◀─ SSE events ─── │  yields one event per step           │
+ └──────────────────────┘                   └──────────────────────────────────────┘
 ```
 
 - **Frontend** is plain static files (`npm run build` → `dist/`). It never needs a server of its own.
-- **Backend** is one endpoint, `GET /generate?prompt=&guidance=&steps=&seed=`, which returns
-  `text/event-stream`. Every message is one JSON object. The format lives in
-  `frontend/src/api/events.ts` and is the contract between the two halves.
+- **Backend** endpoints:
+  - `GET /generate?prompt=&guidance=&steps=&seed=&n=` returns `text/event-stream`. Every message is
+    one JSON object. The format lives in `frontend/src/api/events.ts` and is the contract between
+    the two halves. The page sends guidance 3 and 50 steps; `n` (takes per call) defaults to 4.
+  - `GET /suggest?q=&k=` returns the known-good prompts closest in meaning, each with its best seed.
+  - `GET /health` wakes the server and reports which U-Net, device and retrieval bank are loaded.
 - **Why SSE, not WebSocket:** the data only flows one way (server → browser), SSE works over
   plain HTTP through any proxy, the browser reconnects for you, and FastAPI can stream it from
   a generator in a few lines. WebSockets are only worth it if we later add "cancel" or "change
@@ -65,165 +73,108 @@ on load to wake the server. In mock mode only the local layer runs.
 | Event | When | Payload |
 |---|---|---|
 | `queued` | request accepted | position in queue |
-| `stage_start` / `stage_end` | each of the 4 stages | stage id, wall time, short info string |
+| `stage_start` / `stage_end` | each of the 4 stages (`encode`, `denoise`, `decode`, `vocode`) | stage id, wall time, short info string |
 | `embedding` | after CLAP | 64 values for the bar visual (downsampled from 512) |
 | `denoise_step` | every DDIM step | step, total, timestep `t`, noise level √(1−ᾱₜ), ms, optional `preview` |
 | `result` | end | final mel image + base64 WAV |
 | `done` / `error` | end | total time / message |
 
-`preview` is the mel you get by decoding the current latent estimate with the VAE. Sending it
-every 5 steps is a good default: 10 extra VAE decodes per run is cheap, and each preview is
-only ~27 KB (80 × 256 bytes, base64). Which estimate to show is a choice to make with the real
-model:
+`preview` is the **predicted x₀** (`(x_t − √(1−ᾱ)·ε̂) / √ᾱ`) of the first take, decoded by the VAE:
+what the model "thinks" the final sound is at that step. The server sends it on step 1, every 5th
+step and the last step, ~27 KB each (80 × 256 bytes, base64).
 
-- **x_t** (the noisy latent itself): looks like the mock, noise fading out. Dramatic.
-- **predicted x₀** (`(x_t − √(1−ᾱ)·ε̂) / √ᾱ`): shows what the model "thinks" the final sound
-  is at each step. Blurry early, sharp late. More informative, and what most demos show.
+## 3. The model server
 
-Try both once Phase 6 works.
+Built from `mock-server/server.py`; details, scripts and deploy steps are in `../server/README.md`.
 
-## 3. The real server (after Phase 6)
+1. Loads CLAP, U-Net v4 (EMA weights), VAE decoder and BigVGAN once at startup, plus the CLAP
+   audio bank used for retrieval conditioning and the known-good prompt list for `/suggest`.
+2. `encode`: CLAP text embedding, then blended with the 8 nearest training-audio embeddings.
+3. `denoise`: 50 DDIM steps on 4 takes, conditional and unconditional passes batched together.
+4. `decode`: VAE decode → 80 × 256 log-mel, un-normalised with the training `mel_stats.npy`.
+5. `vocode`: BigVGAN on all takes, CLAP picks the best (near-silent takes rejected), then high-pass,
+   loudness normalisation and fades → 16-bit WAV.
+6. The model work runs in a sync generator under `torch.inference_mode()`, which FastAPI runs in a
+   worker thread, so the event loop keeps flushing events.
 
-Copy `mock-server/server.py` to `server/app.py` and replace the fake blocks:
+## 4. Speed
 
-1. Load CLAP, U-Net (EMA weights), VAE decoder and BigVGAN once at startup.
-2. `encode`: CLAP text embedding (and the empty-prompt embedding for CFG, cached).
-3. `denoise`: DDIM loop; batch cond + uncond into one forward pass; `yield` an event each step;
-   every 5 steps also VAE-decode the estimate and send it as `preview`.
-4. `decode`: VAE decode the final latent → 80 × 256 log-mel. Un-normalise it the same way the
-   training data was normalised.
-5. `vocode`: BigVGAN → waveform → 16-bit WAV.
-6. Run the model work in a thread (`asyncio.to_thread`) or with `torch.inference_mode()` in a
-   sync generator, so the event loop can keep flushing events.
+Measured locally (Apple M4, `DEVICE=mps`): U-Net v4 ~17 ms per sample-step, BigVGAN ~1.6 s per
+clip (the bottleneck), so ~15 s for one `/generate` call with 4 takes. Timings on the Modal T4 haven't
+been written down yet; the `stage_end` events report them per run.
 
-Watch out: the mel settings (n_fft, hop 256, 80 bins, fmin/fmax) must match the BigVGAN
-checkpoint exactly, or the audio will be garbage.
+CPU was never benchmarked: U-Net v4 is 67.5 M params, 50 steps × 4 takes × 2 (CFG), so the decision
+went straight to a GPU. Cold starts take ~20 s, which is why the page pings `/health` on load.
 
-## 4. Open question: is CPU fast enough?
+## 5. Hosting
 
-The models are small, so CPU might be fine. Rough guesses, **to be measured** once Phase 6 exists:
+- **Frontend:** GitHub Pages. Done.
+- **Backend:** Modal, T4 GPU (`../server/modal_app.py`):
+  - scales to zero 5 minutes after the last request;
+  - `max_containers = 1` caps the bill at one GPU;
+  - up to 8 concurrent requests per container; they wait on the server's lock and get `queued` events;
+  - 120 s timeout per request;
+  - CLAP and BigVGAN weights are baked into the image; the U-Net, VAE, `mel_stats.npy` and the
+    retrieval bank live on the `tts-weights` volume.
 
-| Stage | Size | CPU guess (2 vCPU) |
-|---|---|---|
-| CLAP text encoder | ~125M params, 1 short sequence | 50–150 ms |
-| U-Net × 50 DDIM steps (CFG batch of 2) | ~9M params, 4 × 20 × 64 input | 0.5–2 s total |
-| VAE decoder (+ ~10 previews) | small | 0.1–0.5 s |
-| BigVGAN, ~3 s of audio | ~14M (base) – 112M (v2) params | 1–5 s |
+Other hosts were considered (HF Spaces CPU or GPU, Replicate). Modal won because it streams custom
+SSE as-is, bills per second and scales to zero.
 
-How to measure: a small script that loads all four models on CPU, runs 10 generations, and
-prints the median time per stage. Run it on a laptop, then on the target host. Things that
-might help if it's too slow: `torch.set_num_threads`, fewer DDIM steps (25), the smaller
-BigVGAN, `torch.compile`, or ONNX export.
+### Abuse limits
 
-**Decision rule:** if a full run is under ~10 s on free CPU, use free CPU. Otherwise use GPU.
+Done:
 
-## 5. Hosting options
+- **One generation at a time** (a lock in `app.py`); the rest get `queued` events with their position.
+- **Hard caps:** prompt ≤ 200 chars, steps ≤ 100, guidance 1–10, takes ≤ 8.
+- **CORS:** only `https://abrandonwang.github.io` and `localhost`.
+- **Cost cap:** one container at most.
 
-Frontend: **GitHub Pages**, free. Decided.
+Not done:
 
-Backend options (prices change; check before choosing):
+- Per-IP rate limit (e.g. 5 requests/minute, 50/day).
+- Result cache by `(prompt, seed, steps, guidance)`.
+- Cloudflare Turnstile, only if bots show up.
 
-| Option | Cost | Cold start | Notes |
-|---|---|---|---|
-| **HF Spaces, CPU basic (Docker)** | Free (2 vCPU, 16 GB) | Sleeps after ~48 h idle; wake takes ~30 s–2 min | Easiest. Runs our FastAPI as-is. One request at a time is realistic. **Best first choice if CPU is fast enough.** |
-| HF Spaces, ZeroGPU | Needs HF PRO (~$9/mo) to host | GPU attached per call, few s overhead | Only works with the Gradio SDK, so our custom SSE endpoint would need to sit behind Gradio's API. More friction. |
-| HF Spaces, paid GPU (T4) | ~$0.40/h while awake | Same as CPU when asleep | Set a short sleep timeout to cap cost. |
-| **Modal** | Pay per second; free monthly credit (~$30) | ~2–10 s for a small container | Python-native, streams fine, scales to zero. **Best choice if GPU is needed.** |
-| Replicate | Pay per second | Can be 10 s–minutes for custom models | Built for request/response, not custom SSE streams. Least good fit. |
+## 6. Precomputed example gallery (dropped)
 
-### Cold starts
+The v2 design has no room for a gallery, and `/suggest` plus the known-good seeds cover the
+"hear something good fast" goal once the server is warm. If cold starts become a problem, the idea
+still works: run known-good prompts offline, save their events and audio into
+`frontend/public/gallery/` (`web/.gitignore` already allows WAVs there), and replay them instantly.
 
-- Show them honestly: the `queued` event already drives a "Waiting for a GPU…" line in the rail.
-  Add a `warming` event later if the host tells us it's booting.
-- The page can call `GET /health` on load to wake the server early, before the user finishes typing.
-- The **gallery** (below) means a visitor hears something good even if the server is asleep.
+## 7. GitHub Pages deploy
 
-### Queueing and rate limiting
-
-A public demo will get abused. In the real server:
-
-- **One generation at a time** per CPU worker (`asyncio.Semaphore(1)`); others wait and get
-  `queued` events with their position.
-- **Per-IP limit**, e.g. 5 requests/minute and 50/day (a small in-memory token bucket is enough
-  for one worker).
-- **Hard caps:** prompt ≤ 200 chars, steps ≤ 100, guidance 1–10 (the mock server already
-  validates these), and a total timeout per request (e.g. 60 s).
-- **Cache** results by `(prompt, seed, steps, guidance)`: repeats are instant and free.
-- **CORS:** allow only `https://abrandonwang.github.io` (and `localhost` for dev).
-- Optional later: Cloudflare Turnstile if bots show up.
-
-## 6. Precomputed example gallery
-
-Visitors should hear good results in zero seconds, before (or instead of) waiting for the server.
-
-1. Pick ~6–12 prompts that the model does well on (cherry-pick seeds, that's normal for demos).
-2. Run them offline in a notebook. Save `name.wav` and `name.json` (the mel image in the same
-   `MelImage` format) into `frontend/public/gallery/`, plus a `manifest.json`.
-3. Show them without breaking the one-input design, e.g. the typewriter placeholder prompts
-   become clickable, and clicking one replays its stored events + audio instantly.
-   (`web/.gitignore` already allows WAVs in that folder; the root `.gitignore` blocks them elsewhere.)
-4. Bonus: also save the per-step events for each example, and replay them, so the gallery can
-   show the full step-by-step animation with no server at all.
-
-## 7. Deploying the frontend to GitHub Pages
-
-Not done yet, because it needs a file outside `web/`. When ready, add
-`.github/workflows/pages.yml`:
-
-```yaml
-name: pages
-on:
-  push:
-    branches: [main]
-    paths: [web/frontend/**]
-  workflow_dispatch:
-permissions: { contents: read, pages: write, id-token: write }
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: { name: github-pages, url: '${{ steps.d.outputs.page_url }}' }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: npm ci && npm run build
-        working-directory: web/frontend
-        env:
-          VITE_API_URL: ${{ vars.API_URL }} # leave unset to ship the in-browser mock
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: web/frontend/dist }
-      - id: d
-        uses: actions/deploy-pages@v4
-```
-
-Then in GitHub: Settings → Pages → Source: "GitHub Actions". The site lands at
-`https://abrandonwang.github.io/text-to-sound/` (Vite is set to `base: './'` so paths work there).
-Run `npm install` once first so `package-lock.json` exists for `npm ci`.
+Done: `../.github/workflows/pages.yml` builds `web/frontend` on pushes to `main` that touch
+`web/frontend/**` (or the workflow), with `VITE_API_URL` set from the `API_URL` repository variable,
+and deploys to `https://abrandonwang.github.io/text-to-sound/` (Vite uses `base: './'`). Changing the
+server URL means updating `API_URL` and rerunning the workflow. Server-only changes don't redeploy
+the site; they need `modal deploy`.
 
 ## 8. Licensing
 
-Check each of these at the source before launch; this is a summary, not legal advice.
+Check each of these at the source; this is a summary, not legal advice.
 
-- **Clotho** (training data): the audio clips come from Freesound and each keeps its own
-  Creative Commons licence (CC0, CC-BY, and some CC-BY-NC). The dataset terms are on its Zenodo
-  record. Practical upshot: a **non-commercial** research demo is fine; credit Clotho and
-  Freesound on the page. If any training clips are CC-BY-NC, don't sell the model or its output.
+- **Clotho** and **FSD50K** (training data): the audio clips come from Freesound and each keeps its
+  own Creative Commons licence (CC0, CC-BY, and some CC-BY-NC). Practical upshot: a
+  **non-commercial** research demo is fine; credit Clotho, FSD50K and Freesound on the page. Because
+  some training clips are CC-BY-NC, don't sell the model or its output.
 - **CLAP** (LAION-CLAP): the code and the Hugging Face checkpoints are under permissive licences
-  (check the exact one on the model card you use). Credit LAION.
+  (check the exact one on the model card). Credit LAION.
 - **BigVGAN** (NVIDIA): the BigVGAN v2 code and checkpoints are released under MIT. Keep the
   licence notice and credit NVIDIA.
 - **This repo**: MIT (see root `LICENSE`).
 - **Generated audio**: say on the page that it's AI-generated and for demo use.
 - **Fonts**: Instrument Serif, Inter Tight, JetBrains Mono are all OFL (free to use).
 
-Add a small "Credits" line in the footer listing Clotho/Freesound, LAION-CLAP and BigVGAN once
-the real model is live.
+The page doesn't have the credits line or the AI-generated note yet.
 
 ## 9. Next steps
 
-1. ☐ Phase 6 lands → write the CPU benchmark script, fill in §4.
-2. ☐ Pick the host from §5 based on the numbers.
-3. ☐ Build `server/app.py` from the mock; add rate limiting + cache.
-4. ☐ Generate the gallery offline.
-5. ☐ Add the Pages workflow, set `API_URL`, deploy.
-6. ☐ Credits + "AI-generated" note in the footer.
+1. ☑ Phase 6 lands; measure speed (§4).
+2. ☑ Pick the host (Modal T4).
+3. ☑ Build `server/app.py` from the mock.
+4. ☑ Add the Pages workflow, set `API_URL`, deploy.
+5. ☐ Credits (Clotho, FSD50K, Freesound, LAION-CLAP, BigVGAN) and an "AI-generated" note in the footer.
+6. ☐ Per-IP rate limit and a result cache on the server.
+7. ☐ Stop the local typo-fix (`src/vocab/sounds.ts`) from offering names the model can't do yet
+   (drums, speech), which `/suggest` already leaves out.
